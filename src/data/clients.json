@@ -1,0 +1,6 @@
+[
+  { "id": "client_web_1", "type": "WEB", "status": "active" },
+  { "id": "client_pos_1", "type": "POS", "status": "active" },
+  { "id": "client_kiosk_1", "type": "KIOSK", "status": "active" },
+  { "id": "client_delivery_1", "type": "DELIVERY", "status": "active" }
+]

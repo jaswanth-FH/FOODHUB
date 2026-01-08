@@ -1,0 +1,6 @@
+{
+  "pay_by_link": {
+    "enabledFor": ["WEB", "POS"],
+    "disabledFor": ["KIOSK"]
+  }
+}
