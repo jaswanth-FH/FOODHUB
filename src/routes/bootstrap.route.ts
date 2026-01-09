@@ -1,16 +1,18 @@
 import { Router } from "express";
+import { ClientTypeEnum } from "../constants";
+import { HEADERS } from "../constants";
+import { ROUTES } from "../constants";
 import { buildBootstrap } from "../bootstrap/buildBootstrap";
-import { ClientType } from "../types/bootstrap";
 
-const router = Router();
+export const router = Router();
 
-router.get("/bootstrap", (req, res) => {
+
+router.get(ROUTES.BOOTSTRAP, (req, res) => {
   const clientType =
-    (req.header("X-Client-Type") as ClientType) || "WEB";
+    (req.header(HEADERS.CLIENT_TYPE) as ClientTypeEnum) ||
+    ClientTypeEnum.WEB;
 
   const response = buildBootstrap({ clientType });
 
   res.json(response);
 });
-
-export default router;

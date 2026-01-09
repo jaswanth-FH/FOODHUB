@@ -1,7 +1,7 @@
-import { ClientType } from "../types/bootstrap";
+import { ClientTypeEnum } from "../constants";
 
 export const CLIENT_CAPABILITIES: Record<
-  ClientType,
+  ClientTypeEnum,
   Record<string, boolean>
 > = {
   WEB: {

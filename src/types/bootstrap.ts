@@ -1,11 +1,12 @@
-export type ClientType = "WEB" | "POS" | "KIOSK" | "DELIVERY";
+import { ClientTypeEnum } from "../constants";
+import { FeatureKeyEnum } from "../constants";
 
 export interface BootstrapContext {
-  clientType: ClientType;
+  clientType: ClientTypeEnum;
 }
 
 export interface FeaturePlugin {
-  key: string;
+  key: FeatureKeyEnum;
   isEnabled(ctx: BootstrapContext): boolean;
   expose(): Record<string, unknown>;
 }

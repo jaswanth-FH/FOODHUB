@@ -1,20 +1,15 @@
-import { ClientType } from "../types/bootstrap";
-
-const VALID_CLIENT_TYPES: ClientType[] = [
-  "WEB",
-  "POS",
-  "KIOSK",
-  "DELIVERY"
-];
+import { ClientTypeEnum } from "../constants";
 
 export function normalizeClientType(
   input?: string
-): ClientType {
-  if (!input) return "WEB";
+): ClientTypeEnum {
+  if (!input) return ClientTypeEnum.WEB;
 
   const upper = input.toUpperCase();
 
-  return VALID_CLIENT_TYPES.includes(upper as ClientType)
-    ? (upper as ClientType)
-    : "WEB";
+  return Object.values(ClientTypeEnum).includes(
+    upper as ClientTypeEnum
+  )
+    ? (upper as ClientTypeEnum)
+    : ClientTypeEnum.WEB;
 }

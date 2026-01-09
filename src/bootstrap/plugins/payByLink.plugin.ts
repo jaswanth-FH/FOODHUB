@@ -1,10 +1,12 @@
+import { FeatureKeyEnum } from "../../constants";
+import { ClientTypeEnum } from "../../constants";
 import { FeaturePlugin, BootstrapContext } from "../../types/bootstrap";
 
 export class PayByLinkPlugin implements FeaturePlugin {
-  key = "pay_by_link";
+  key = FeatureKeyEnum.PAY_BY_LINK;
 
   isEnabled(ctx: BootstrapContext): boolean {
-    return ctx.clientType !== "KIOSK";
+    return ctx.clientType !== ClientTypeEnum.KIOSK;
   }
 
   expose() {
