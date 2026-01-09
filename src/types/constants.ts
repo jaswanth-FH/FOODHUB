@@ -5,6 +5,11 @@ export enum ClientTypeEnum {
   DELIVERY = "DELIVERY"
 }
 
+export enum Status{
+  ACTIVE = "ACTIVE",
+  DISABLED = "DISABLED"
+}
+
 export enum ApiNameEnum {
   MENU = "MENU",
   PAYMENTS = "PAYMENTS",
