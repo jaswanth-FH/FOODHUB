@@ -1,12 +1,13 @@
 import { CLIENTS } from "../data/clients.data";
 import { Client } from "../types/client";
 import * as Constants from "../types/constants";
+import { normalizeEnum } from "../utils/normalizeEnum";
 import { ClientSchema } from "../types/schemas";
 import { ERROR_CODES } from "../types/errorCodes";
 import { z } from "zod";
 
 
-let clients: Client[] = [...CLIENTS];
+let clients : Client[] = [...CLIENTS];
 
 
 const ClientsSchema = z.array(ClientSchema);
@@ -34,7 +35,20 @@ export async function getClientById(id: string): Promise<Client | undefined> {
 }
 
 export async function createClient(client: Client): Promise<Client> {
-  const validated = ClientSchema.parse(client);
+
+  const normalized: Client = {
+    ...client,
+    type: normalizeEnum(Constants.ClientTypeEnum, client.type, Constants.ClientTypeEnum.WEB),
+    status: normalizeEnum(Constants.StatusEnum, client.status, Constants.StatusEnum.ACTIVE),
+    functions: client.functions.map(f =>
+      normalizeEnum(Constants.FunctionsEnum, f)
+    ),
+    features: client.features.map(f =>
+      normalizeEnum(Constants.FeatureKeyEnum, f)
+    )
+  };
+
+  const validated = ClientSchema.parse(normalized);
   const list = await read();
 
   if (list.find(c => c.id === validated.id)) {
@@ -60,9 +74,29 @@ export async function updateClient(id: string, updated: Partial<Client>): Promis
     };
   }
 
+  const normalized = {
+    ...updated,
+    type: updated.type
+      ? normalizeEnum(Constants.ClientTypeEnum, updated.type)
+      : undefined,
+    status: updated.status
+      ? normalizeEnum(Constants.StatusEnum, updated.status)
+      : undefined,
+    functions: updated.functions
+      ? updated.functions.map(f =>
+          normalizeEnum(Constants.FunctionsEnum, f)
+        )
+      : undefined,
+    features: updated.features
+      ? updated.features.map(f =>
+          normalizeEnum(Constants.FeatureKeyEnum, f)
+        )
+      : undefined
+  };
+
   const newClient = ClientSchema.parse({
     ...list[index],
-    ...updated,
+    ...normalized,
     meta: {
       ...list[index].meta,
       updatedAt: new Date().toISOString()
@@ -73,6 +107,7 @@ export async function updateClient(id: string, updated: Partial<Client>): Promis
   await write(list);
   return newClient;
 }
+
 
 export async function deleteClient(id: string): Promise<void> {
   const list = await read();
