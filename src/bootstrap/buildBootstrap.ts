@@ -5,7 +5,7 @@ import { normalizeClientType } from "./normalizeClientType";
 import { getFunctionsForClient } from "./clientApiMap";
 import { META } from "../types/constants";
 
-export function buildBootstrap(ctx: BootstrapContext) {
+export async function buildBootstrap(ctx: BootstrapContext) {
   const clientType = normalizeClientType(ctx.clientType);
 
   return {
@@ -13,10 +13,10 @@ export function buildBootstrap(ctx: BootstrapContext) {
 
     client: {
       type: clientType,
-      functions: getFunctionsForClient(clientType)
+      functions: await getFunctionsForClient(clientType)
     },
 
-    features: resolveFeatures({ clientType }),
+    features: await resolveFeatures({ clientType }),
 
     meta: {
       version: META.VERSION,

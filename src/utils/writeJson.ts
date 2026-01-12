@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-export function writeJson<T>(fileName: string, data: T): void {
+export async function writeJson<T>(fileName: string, data: T): Promise<void> {
   const filePath = path.join(__dirname, "..", "data", fileName);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
 }

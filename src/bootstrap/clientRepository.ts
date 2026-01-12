@@ -16,26 +16,26 @@ const validateClients = (data: unknown): Client[] => {
   return ClientsSchema.parse(data);
 };
 
-function read(): Client[] {
+async function read(): Promise<Client[]> {
   return validateClients(clients);
 }
 
-function write(data: Client[]) {
+async function write(data: Client[]): Promise<void> {
   clients = validateClients(data);
 }
 
-export function getAllClients(): Client[] {
-  return read();
+export async function getAllClients(): Promise<Client[]> {
+  return await read();
 }
 
-export function getClientById(id: string): Client | undefined {
-  return read().find(c => c.id === id);
+export async function getClientById(id: string): Promise<Client | undefined> {
+  const list = await read();
+  return list.find(c => c.id === id);
 }
 
-export function createClient(client: Client): Client {
+export async function createClient(client: Client): Promise<Client> {
   const validated = ClientSchema.parse(client);
-
-  const list = read();
+  const list = await read();
 
   if (list.find(c => c.id === validated.id)) {
     throw {
@@ -45,13 +45,12 @@ export function createClient(client: Client): Client {
   }
 
   list.push(validated);
-  write(list);
-
+  await write(list);
   return validated;
 }
 
-export function updateClient(id: string, updated: Partial<Client>): Client {
-  const list = read();
+export async function updateClient(id: string, updated: Partial<Client>): Promise<Client> {
+  const list = await read();
   const index = list.findIndex(c => c.id === id);
 
   if (index === -1) {
@@ -71,13 +70,12 @@ export function updateClient(id: string, updated: Partial<Client>): Client {
   });
 
   list[index] = newClient;
-  write(list);
-
+  await write(list);
   return newClient;
 }
 
-export function deleteClient(id: string): void {
-  const list = read();
+export async function deleteClient(id: string): Promise<void> {
+  const list = await read();
   const filtered = list.filter(c => c.id !== id);
 
   if (filtered.length === list.length) {
@@ -87,12 +85,11 @@ export function deleteClient(id: string): void {
     };
   }
 
-  write(filtered);
+  await write(filtered);
 }
 
-
-export function getClientFunctions(id: string) {
-  const client = getClientById(id);
+export async function getClientFunctions(id: string): Promise<Constants.FunctionsEnum[]> {
+  const client = await getClientById(id);
   if (!client) throw {
     code: ERROR_CODES.CLIENT_NOT_FOUND,
     message: "Client not found"
@@ -100,12 +97,12 @@ export function getClientFunctions(id: string) {
   return client.functions;
 }
 
-export function updateClientFunctions(id: string, functions: Constants.FunctionsEnum[]) {
-  return updateClient(id, { functions });
+export async function updateClientFunctions(id: string, functions: Constants.FunctionsEnum[]): Promise<Client> {
+  return await updateClient(id, { functions });
 }
 
-export function getClientFeatures(id: string) {
-  const client = getClientById(id);
+export async function getClientFeatures(id: string): Promise<Constants.FeatureKeyEnum[]> {
+  const client = await getClientById(id);
   if (!client) throw {
     code: ERROR_CODES.CLIENT_NOT_FOUND,
     message: "Client not found"
@@ -113,12 +110,12 @@ export function getClientFeatures(id: string) {
   return client.features;
 }
 
-export function updateClientFeatures(id: string, features: Constants.FeatureKeyEnum[]) {
-  return updateClient(id, { features });
+export async function updateClientFeatures(id: string, features: Constants.FeatureKeyEnum[]): Promise<Client> {
+  return await updateClient(id, { features });
 }
 
-export function getClientDevices(id: string) {
-  const client = getClientById(id);
+export async function getClientDevices(id: string): Promise<any[]> {
+  const client = await getClientById(id);
   if (!client) throw {
     code: ERROR_CODES.CLIENT_NOT_FOUND,
     message: "Client not found"
@@ -126,10 +123,10 @@ export function getClientDevices(id: string) {
   return client.devices;
 }
 
-export function updateClientDevices(id: string, devices: any[]) {
-  return updateClient(id, { devices });
+export async function updateClientDevices(id: string, devices: any[]): Promise<Client> {
+  return await updateClient(id, { devices });
 }
 
-export function updateClientStatus(id: string, status: Constants.StatusEnum) {
-  return updateClient(id, { status });
+export async function updateClientStatus(id: string, status: Constants.StatusEnum): Promise<Client> {
+  return await updateClient(id, { status });
 }

@@ -10,9 +10,9 @@ interface ClientApiConfig {
 }
 let clients = [...CLIENTS] as ClientApiConfig[];
 
-export function getFunctionsForClient(
+export async function getFunctionsForClient(
   clientType: ClientTypeEnum
-): FunctionsEnum[] {
+): Promise<FunctionsEnum[]> {
   const client = clients.find(c => c.type === clientType);
   return client ? client.functions : [];
 }

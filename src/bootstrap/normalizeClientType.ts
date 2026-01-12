@@ -1,8 +1,8 @@
 import { ClientTypeEnum } from "../types/constants";
 
-export function normalizeClientType(
+export async function normalizeClientType(
   input?: string
-): ClientTypeEnum {
+): Promise<ClientTypeEnum> {
   if (!input) return ClientTypeEnum.WEB;
 
   const upper = input.toUpperCase();
