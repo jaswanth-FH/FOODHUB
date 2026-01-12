@@ -1,9 +1,8 @@
 import { BootstrapContext } from "../types/bootstrap";
 import { SYSTEM_DEFAULTS } from "./defaults";
-import { CLIENT_CAPABILITIES } from "./clientCapabilities";
 import { resolveFeatures } from "./plugins";
 import { normalizeClientType } from "./normalizeClientType";
-import { getApisForClient } from "./clientApiMap";
+import { getFunctionsForClient } from "./clientApiMap";
 import { META } from "../types/constants";
 
 export function buildBootstrap(ctx: BootstrapContext) {
@@ -14,8 +13,7 @@ export function buildBootstrap(ctx: BootstrapContext) {
 
     client: {
       type: clientType,
-      capabilities: CLIENT_CAPABILITIES[clientType],
-      apis: getApisForClient(clientType)
+      functions: getFunctionsForClient(clientType)
     },
 
     features: resolveFeatures({ clientType }),

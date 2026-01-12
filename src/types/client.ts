@@ -1,7 +1,7 @@
 import { ClientTypeEnum } from "./constants";
-import { ApiNameEnum } from "./constants";
+import { FunctionsEnum } from "./constants";
 import { FeatureKeyEnum } from "./constants";
-import { Status } from "./constants";
+import { StatusEnum } from "./constants";
 
 export interface ClientMeta {
   createdAt: string;
@@ -11,10 +11,9 @@ export interface ClientMeta {
 export interface Client {
   id: string;
   type: ClientTypeEnum;
-  status: Status;
-  apis: ApiNameEnum[];
+  status: StatusEnum;
+  functions: FunctionsEnum[];
   features: FeatureKeyEnum[];
-  capabilities: Record<string, boolean>;
   devices: any[];
   meta: ClientMeta;
 }

@@ -3,7 +3,7 @@
     "id": "client_kiosk_1",
     "type": "KIOSK",
     "status": "ACTIVE",
-    "apis": [
+    "functions": [
       "MENU",
       "PAYMENTS",
       "ONLINE_ORDERS"
@@ -11,11 +11,6 @@
     "features": [
       "pay_by_link"
     ],
-    "capabilities": {
-      "canPlaceOrder": true,
-      "canCancelOrder": false,
-      "canAcceptOrder": false
-    },
     "devices": [
       {
         "id": "device_kiosk_01",
@@ -33,7 +28,7 @@
     "id": "client_web_1",
     "type": "WEB",
     "status": "ACTIVE",
-    "apis": [
+    "functions": [
       "STORE",
       "ORDERS",
       "DELIVERY",
@@ -44,11 +39,6 @@
       "pay_by_link",
       "delivery_tracking"
     ],
-    "capabilities": {
-      "canPlaceOrder": true,
-      "canCancelOrder": true,
-      "canAcceptOrder": false
-    },
     "devices": [
       {
         "id": "device_web_01",
@@ -66,7 +56,7 @@
     "id": "client_pos_1",
     "type": "POS",
     "status": "ACTIVE",
-    "apis": [
+    "functions": [
       "MENU",
       "PAYMENTS",
       "ONLINE_ORDERS",
@@ -76,11 +66,6 @@
       "pay_by_link",
       "partial_refund"
     ],
-    "capabilities": {
-      "canPlaceOrder": true,
-      "canCancelOrder": true,
-      "canAcceptOrder": true
-    },
     "devices": [
       {
         "id": "device_pos_01",
@@ -98,18 +83,13 @@
     "id": "client_delivery_1",
     "type": "DELIVERY",
     "status": "ACTIVE",
-    "apis": [
+    "functions": [
       "DELIVERY",
       "DELIVERY_ORDERS"
     ],
     "features": [
       "delivery_tracking"
     ],
-    "capabilities": {
-      "canPlaceOrder": false,
-      "canCancelOrder": false,
-      "canAcceptOrder": false
-    },
     "devices": [
       {
         "id": "device_delivery_01",
@@ -127,11 +107,10 @@
     "id": "client_test_1",
     "type": "WEB",
     "status": "ACTIVE",
-    "apis": [
+    "functions": [
       "STORE"
     ],
     "features": [],
-    "capabilities": {},
     "devices": [],
     "meta": {
       "createdAt": "2026-01-10T00:00:00Z",
