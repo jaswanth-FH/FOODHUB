@@ -1,7 +1,7 @@
 import { loadJson } from "../utils/loadJson";
 import { writeJson } from "../utils/writeJson";
 import { Client } from "../types/client";
-
+import { Status } from "../types/constants";
 const FILE = "clients.json";
 
 function read(): Client[] {
@@ -57,4 +57,49 @@ export function deleteClient(id: string): void {
   }
 
   write(filtered);
+}
+
+
+export function getClientApis(id: string) {
+  const client = getClientById(id);
+  if (!client) throw new Error("Client not found");
+  return client.apis;
+}
+
+export function updateClientApis(id: string, apis: any[]) {
+  return updateClient(id, { apis });
+}
+
+export function getClientFeatures(id: string) {
+  const client = getClientById(id);
+  if (!client) throw new Error("Client not found");
+  return client.features;
+}
+
+export function updateClientFeatures(id: string, features: any[]) {
+  return updateClient(id, { features });
+}
+
+export function getClientCapabilities(id: string) {
+  const client = getClientById(id);
+  if (!client) throw new Error("Client not found");
+  return client.capabilities;
+}
+
+export function updateClientCapabilities(id: string, capabilities: any) {
+  return updateClient(id, { capabilities });
+}
+
+export function getClientDevices(id: string) {
+  const client = getClientById(id);
+  if (!client) throw new Error("Client not found");
+  return client.devices;
+}
+
+export function updateClientDevices(id: string, devices: any[]) {
+  return updateClient(id, { devices });
+}
+
+export function updateClientStatus(id: string, status: Status) {
+  return updateClient(id, { status });
 }
