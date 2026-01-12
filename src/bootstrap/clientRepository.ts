@@ -35,20 +35,32 @@ export async function getClientById(id: string): Promise<Client | undefined> {
 }
 
 export async function createClient(client: Client): Promise<Client> {
-
   const normalized: Client = {
     ...client,
+
     type: normalizeEnum(Constants.ClientTypeEnum, client.type, Constants.ClientTypeEnum.WEB),
+
     status: normalizeEnum(Constants.StatusEnum, client.status, Constants.StatusEnum.ACTIVE),
-    functions: client.functions.map(f =>
-      normalizeEnum(Constants.FunctionsEnum, f)
-    ),
-    features: client.features.map(f =>
-      normalizeEnum(Constants.FeatureKeyEnum, f)
-    )
+
+    functions: Array.isArray(client.functions)
+      ? client.functions.map(f =>
+          normalizeEnum(Constants.FunctionsEnum, f)
+        )
+      : [],
+
+    features: Array.isArray(client.features)
+      ? client.features.map(f =>
+          normalizeEnum(Constants.FeatureKeyEnum, f)
+        )
+      : [],
+
+    devices: Array.isArray(client.devices) ? client.devices : [],
+
+    meta: client.meta
   };
 
   const validated = ClientSchema.parse(normalized);
+
   const list = await read();
 
   if (list.find(c => c.id === validated.id)) {
@@ -60,8 +72,10 @@ export async function createClient(client: Client): Promise<Client> {
 
   list.push(validated);
   await write(list);
+
   return validated;
 }
+
 
 export async function updateClient(id: string, updated: Partial<Client>): Promise<Client> {
   const list = await read();
@@ -74,39 +88,49 @@ export async function updateClient(id: string, updated: Partial<Client>): Promis
     };
   }
 
-  const normalized = {
-    ...updated,
-    type: updated.type
+  const current = list[index];
+
+  const normalized: Partial<Client> = {
+    type: updated.type !== undefined
       ? normalizeEnum(Constants.ClientTypeEnum, updated.type)
-      : undefined,
-    status: updated.status
+      : current.type,
+
+    status: updated.status !== undefined
       ? normalizeEnum(Constants.StatusEnum, updated.status)
-      : undefined,
-    functions: updated.functions
+      : current.status,
+
+    functions: updated.functions !== undefined
       ? updated.functions.map(f =>
           normalizeEnum(Constants.FunctionsEnum, f)
         )
-      : undefined,
-    features: updated.features
+      : current.functions,
+
+    features: updated.features !== undefined
       ? updated.features.map(f =>
           normalizeEnum(Constants.FeatureKeyEnum, f)
         )
-      : undefined
+      : current.features,
+
+    devices: updated.devices !== undefined
+      ? updated.devices
+      : current.devices
   };
 
   const newClient = ClientSchema.parse({
-    ...list[index],
+    ...current,
     ...normalized,
     meta: {
-      ...list[index].meta,
+      ...current.meta,
       updatedAt: new Date().toISOString()
     }
   });
 
   list[index] = newClient;
   await write(list);
+
   return newClient;
 }
+
 
 
 export async function deleteClient(id: string): Promise<void> {

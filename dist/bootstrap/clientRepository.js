@@ -74,8 +74,14 @@ async function createClient(client) {
         ...client,
         type: (0, normalizeEnum_1.normalizeEnum)(Constants.ClientTypeEnum, client.type, Constants.ClientTypeEnum.WEB),
         status: (0, normalizeEnum_1.normalizeEnum)(Constants.StatusEnum, client.status, Constants.StatusEnum.ACTIVE),
-        functions: client.functions.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FunctionsEnum, f)),
-        features: client.features.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FeatureKeyEnum, f))
+        functions: Array.isArray(client.functions)
+            ? client.functions.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FunctionsEnum, f))
+            : [],
+        features: Array.isArray(client.features)
+            ? client.features.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FeatureKeyEnum, f))
+            : [],
+        devices: Array.isArray(client.devices) ? client.devices : [],
+        meta: client.meta
     };
     const validated = schemas_1.ClientSchema.parse(normalized);
     const list = await read();
@@ -98,26 +104,29 @@ async function updateClient(id, updated) {
             message: "Client not found"
         };
     }
+    const current = list[index];
     const normalized = {
-        ...updated,
-        type: updated.type
+        type: updated.type !== undefined
             ? (0, normalizeEnum_1.normalizeEnum)(Constants.ClientTypeEnum, updated.type)
-            : undefined,
-        status: updated.status
+            : current.type,
+        status: updated.status !== undefined
             ? (0, normalizeEnum_1.normalizeEnum)(Constants.StatusEnum, updated.status)
-            : undefined,
-        functions: updated.functions
+            : current.status,
+        functions: updated.functions !== undefined
             ? updated.functions.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FunctionsEnum, f))
-            : undefined,
-        features: updated.features
+            : current.functions,
+        features: updated.features !== undefined
             ? updated.features.map(f => (0, normalizeEnum_1.normalizeEnum)(Constants.FeatureKeyEnum, f))
-            : undefined
+            : current.features,
+        devices: updated.devices !== undefined
+            ? updated.devices
+            : current.devices
     };
     const newClient = schemas_1.ClientSchema.parse({
-        ...list[index],
+        ...current,
         ...normalized,
         meta: {
-            ...list[index].meta,
+            ...current.meta,
             updatedAt: new Date().toISOString()
         }
     });
