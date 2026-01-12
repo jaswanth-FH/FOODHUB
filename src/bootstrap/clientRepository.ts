@@ -1,11 +1,13 @@
-import { loadJson } from "../utils/loadJson";
-import { writeJson } from "../utils/writeJson";
+import { CLIENTS } from "../data/clients.data";
 import { Client } from "../types/client";
 import * as Constants from "../types/constants";
 import { ClientSchema } from "../types/schemas";
+import { ERROR_CODES } from "../types/errorCodes";
 import { z } from "zod";
 
-const FILE = "clients.json";
+
+let clients: Client[] = [...CLIENTS];
+
 
 const ClientsSchema = z.array(ClientSchema);
 
@@ -15,15 +17,12 @@ const validateClients = (data: unknown): Client[] => {
 };
 
 function read(): Client[] {
-  const data = loadJson<Client[]>(FILE);
-  return validateClients(data);
+  return validateClients(clients);
 }
 
 function write(data: Client[]) {
-  validateClients(data);
-  writeJson(FILE, data);
+  clients = validateClients(data);
 }
-
 
 export function getAllClients(): Client[] {
   return read();
@@ -34,41 +33,58 @@ export function getClientById(id: string): Client | undefined {
 }
 
 export function createClient(client: Client): Client {
-  const clients = read();
-  client = ClientSchema.parse(client);
-  clients.push(client);
-  write(clients);
-  return client;
+  const validated = ClientSchema.parse(client);
+
+  const list = read();
+
+  if (list.find(c => c.id === validated.id)) {
+    throw {
+      code: ERROR_CODES.CLIENT_ALREADY_EXISTS,
+      message: "Client already exists"
+    };
+  }
+
+  list.push(validated);
+  write(list);
+
+  return validated;
 }
 
 export function updateClient(id: string, updated: Partial<Client>): Client {
-  const clients = read();
-  const index = clients.findIndex(c => c.id === id);
+  const list = read();
+  const index = list.findIndex(c => c.id === id);
 
   if (index === -1) {
-    throw new Error("Client not found");
+    throw {
+      code: ERROR_CODES.CLIENT_NOT_FOUND,
+      message: "Client not found"
+    };
   }
 
   const newClient = ClientSchema.parse({
-    ...clients[index],
+    ...list[index],
     ...updated,
     meta: {
-      ...clients[index].meta,
+      ...list[index].meta,
       updatedAt: new Date().toISOString()
     }
   });
 
-  clients[index] = newClient;
-  write(clients);
-  return clients[index];
+  list[index] = newClient;
+  write(list);
+
+  return newClient;
 }
 
 export function deleteClient(id: string): void {
-  const clients = read();
-  const filtered = clients.filter(c => c.id !== id);
+  const list = read();
+  const filtered = list.filter(c => c.id !== id);
 
-  if (filtered.length === clients.length) {
-    throw new Error("Client not found");
+  if (filtered.length === list.length) {
+    throw {
+      code: ERROR_CODES.CLIENT_NOT_FOUND,
+      message: "Client not found"
+    };
   }
 
   write(filtered);
@@ -77,7 +93,10 @@ export function deleteClient(id: string): void {
 
 export function getClientFunctions(id: string) {
   const client = getClientById(id);
-  if (!client) throw new Error("Client not found");
+  if (!client) throw {
+    code: ERROR_CODES.CLIENT_NOT_FOUND,
+    message: "Client not found"
+  };
   return client.functions;
 }
 
@@ -87,7 +106,10 @@ export function updateClientFunctions(id: string, functions: Constants.Functions
 
 export function getClientFeatures(id: string) {
   const client = getClientById(id);
-  if (!client) throw new Error("Client not found");
+  if (!client) throw {
+    code: ERROR_CODES.CLIENT_NOT_FOUND,
+    message: "Client not found"
+  };
   return client.features;
 }
 
@@ -97,7 +119,10 @@ export function updateClientFeatures(id: string, features: Constants.FeatureKeyE
 
 export function getClientDevices(id: string) {
   const client = getClientById(id);
-  if (!client) throw new Error("Client not found");
+  if (!client) throw {
+    code: ERROR_CODES.CLIENT_NOT_FOUND,
+    message: "Client not found"
+  };
   return client.devices;
 }
 

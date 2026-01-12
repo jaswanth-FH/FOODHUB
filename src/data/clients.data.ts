@@ -1,22 +1,25 @@
-[
+import *  as constants from "../types/constants";
+
+
+export const CLIENTS = [
   {
     "id": "client_kiosk_1",
-    "type": "KIOSK",
-    "status": "ACTIVE",
+    "type": constants.ClientTypeEnum.KIOSK,
+    "status": constants.StatusEnum.ACTIVE,
     "functions": [
-      "MENU",
-      "PAYMENTS",
-      "ONLINE_ORDERS"
+      constants.FunctionsEnum.MENU,
+      constants.FunctionsEnum.PAYMENTS,
+      constants.FunctionsEnum.ONLINE_ORDERS
     ],
     "features": [
-      "pay_by_link"
+      constants.FeatureKeyEnum.PAY_BY_LINK
     ],
     "devices": [
       {
         "id": "device_kiosk_01",
         "model": "Android Kiosk",
         "ip": "122.185.69.226",
-        "status": "ACTIVE"
+        "status": constants.StatusEnum.ACTIVE
       }
     ],
     "meta": {
@@ -26,18 +29,18 @@
   },
   {
     "id": "client_web_1",
-    "type": "WEB",
-    "status": "ACTIVE",
+    "type": constants.ClientTypeEnum.WEB,
+    "status": constants.StatusEnum.ACTIVE,
     "functions": [
-      "STORE",
-      "ORDERS",
-      "DELIVERY",
-      "ONLINE_ORDERS",
-      "OFFLINE_ORDERS"
+      constants.FunctionsEnum.STORE,
+      constants.FunctionsEnum.ORDERS,
+      constants.FunctionsEnum.DELIVERY,
+      constants.FunctionsEnum.ONLINE_ORDERS,
+      constants.FunctionsEnum.OFFLINE_ORDERS
     ],
     "features": [
-      "pay_by_link",
-      "delivery_tracking"
+      constants.FeatureKeyEnum.PAY_BY_LINK,
+      constants.FeatureKeyEnum.DELIVERY_TRACKING
     ],
     "devices": [
       {
@@ -54,17 +57,17 @@
   },
   {
     "id": "client_pos_1",
-    "type": "POS",
-    "status": "ACTIVE",
+    "type": constants.ClientTypeEnum.POS,
+    "status": constants.StatusEnum.ACTIVE,
     "functions": [
-      "MENU",
-      "PAYMENTS",
-      "ONLINE_ORDERS",
-      "OFFLINE_ORDERS"
+      constants.FunctionsEnum.MENU,
+      constants.FunctionsEnum.PAYMENTS,
+      constants.FunctionsEnum.ONLINE_ORDERS,
+      constants.FunctionsEnum.OFFLINE_ORDERS
     ],
     "features": [
-      "pay_by_link",
-      "partial_refund"
+      constants.FeatureKeyEnum.PAY_BY_LINK,
+      constants.FeatureKeyEnum.PARTIAL_REFUND
     ],
     "devices": [
       {
@@ -81,54 +84,26 @@
   },
   {
     "id": "client_delivery_1",
-    "type": "DELIVERY",
-    "status": "ACTIVE",
+    "type": constants.ClientTypeEnum.DELIVERY,
+    "status": constants.StatusEnum.ACTIVE,
     "functions": [
-      "DELIVERY",
-      "DELIVERY_ORDERS"
+      constants.FunctionsEnum.DELIVERY,
+      constants.FunctionsEnum.DELIVERY_ORDERS
     ],
     "features": [
-      "delivery_tracking"
+      constants.FeatureKeyEnum.DELIVERY_TRACKING
     ],
     "devices": [
       {
         "id": "device_delivery_01",
         "model": "Android Driver App",
         "ip": "82.163.78.100",
-        "status": "ACTIVE"
+        "status": constants.StatusEnum.ACTIVE
       }
     ],
     "meta": {
       "createdAt": "2026-01-01T00:00:00Z",
       "updatedAt": "2026-01-08T10:15:00Z"
-    }
-  },
-  {
-    "id": "client_test_1",
-    "type": "WEB",
-    "status": "ACTIVE",
-    "functions": [
-      "STORE"
-    ],
-    "features": [],
-    "devices": [],
-    "meta": {
-      "createdAt": "2026-01-10T00:00:00Z",
-      "updatedAt": "2026-01-10T00:00:00Z"
-    }
-  },
-  {
-    "id": "client_test",
-    "type": "WEB",
-    "status": "ACTIVE",
-    "functions": [
-      "MENU"
-    ],
-    "features": [],
-    "devices": [],
-    "meta": {
-      "createdAt": "2026-01-01",
-      "updatedAt": "2026-01-01"
     }
   }
 ]

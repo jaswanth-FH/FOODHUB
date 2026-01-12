@@ -1,4 +1,4 @@
-import { loadJson } from "../utils/loadJson";
+import { CLIENTS } from "../data/clients.data";
 import { ClientTypeEnum } from "../types/constants";
 import { FunctionsEnum } from "../types/constants";
 
@@ -8,8 +8,7 @@ interface ClientApiConfig {
   status: string;
   functions: FunctionsEnum[];
 }
-
-const clients = loadJson<ClientApiConfig[]>("clients.json");
+let clients = [...CLIENTS] as ClientApiConfig[];
 
 export function getFunctionsForClient(
   clientType: ClientTypeEnum

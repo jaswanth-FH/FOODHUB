@@ -4,7 +4,8 @@ export const ERROR_CODES = {
   INVALID_HEADER: "E03",
   INVALID_BODY: "E04",
   INVALID_QUERY: "E05",
-  INTERNAL_SERVER_ERROR: "E06"
+  INTERNAL_SERVER_ERROR: "E06",
+  CLIENT_ALREADY_EXISTS: "E07"
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
