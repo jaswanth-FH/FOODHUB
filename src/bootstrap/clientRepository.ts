@@ -1,16 +1,29 @@
 import { loadJson } from "../utils/loadJson";
 import { writeJson } from "../utils/writeJson";
 import { Client } from "../types/client";
-import { StatusEnum } from "../types/constants";
+import * as Constants from "../types/constants";
+import { ClientSchema } from "../types/schemas";
+import { z } from "zod";
+
 const FILE = "clients.json";
 
+const ClientsSchema = z.array(ClientSchema);
+
+
+const validateClients = (data: unknown): Client[] => {
+  return ClientsSchema.parse(data);
+};
+
 function read(): Client[] {
-  return loadJson<Client[]>(FILE);
+  const data = loadJson<Client[]>(FILE);
+  return validateClients(data);
 }
 
 function write(data: Client[]) {
+  validateClients(data);
   writeJson(FILE, data);
 }
+
 
 export function getAllClients(): Client[] {
   return read();
@@ -22,6 +35,7 @@ export function getClientById(id: string): Client | undefined {
 
 export function createClient(client: Client): Client {
   const clients = read();
+  client = ClientSchema.parse(client);
   clients.push(client);
   write(clients);
   return client;
@@ -35,15 +49,16 @@ export function updateClient(id: string, updated: Partial<Client>): Client {
     throw new Error("Client not found");
   }
 
-  clients[index] = {
+  const newClient = ClientSchema.parse({
     ...clients[index],
     ...updated,
     meta: {
       ...clients[index].meta,
       updatedAt: new Date().toISOString()
     }
-  };
+  });
 
+  clients[index] = newClient;
   write(clients);
   return clients[index];
 }
@@ -66,7 +81,7 @@ export function getClientFunctions(id: string) {
   return client.functions;
 }
 
-export function updateClientFunctions(id: string, functions: any[]) {
+export function updateClientFunctions(id: string, functions: Constants.FunctionsEnum[]) {
   return updateClient(id, { functions });
 }
 
@@ -76,7 +91,7 @@ export function getClientFeatures(id: string) {
   return client.features;
 }
 
-export function updateClientFeatures(id: string, features: any[]) {
+export function updateClientFeatures(id: string, features: Constants.FeatureKeyEnum[]) {
   return updateClient(id, { features });
 }
 
@@ -90,6 +105,6 @@ export function updateClientDevices(id: string, devices: any[]) {
   return updateClient(id, { devices });
 }
 
-export function updateClientStatus(id: string, status: StatusEnum) {
+export function updateClientStatus(id: string, status: Constants.StatusEnum) {
   return updateClient(id, { status });
 }
