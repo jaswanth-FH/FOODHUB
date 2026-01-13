@@ -7,7 +7,8 @@ export enum ClientTypeEnum {
 
 export enum StatusEnum{
   ACTIVE = "ACTIVE",
-  DISABLED = "DISABLED"
+  DISABLED = "DISABLED",
+  MAINTENANCE = "MAINTENANCE"
 }
 
 export enum FunctionsEnum {

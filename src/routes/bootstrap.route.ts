@@ -3,7 +3,7 @@ import { ClientTypeEnum } from "../types/constants";
 import { HEADERS } from "../types/constants";
 import { ROUTES } from "../types/constants";
 import { buildBootstrap } from "../bootstrap/buildBootstrap";
-import { apiResponse } from "../utils/apiResponses";
+import { apiResponse } from "../utils/responses";
 
 
 export const router = Router();

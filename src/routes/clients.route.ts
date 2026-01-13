@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ROUTES } from "../types/constants";
-import { apiResponse } from "../utils/apiResponses";
+import { responseMessage  } from "../utils/responses";
+import { ERROR_CODES } from "../types/errorCodes";
 import {
   getAllClients,
   getClientById,
@@ -19,65 +20,124 @@ import {
 const router = Router();
 
 
-router.get(ROUTES.CLIENTS, (req, res) => {
-  res.json(apiResponse(getAllClients(), "Clients loaded"));
+router.get(ROUTES.CLIENTS, async (req, res, next) => {
+  try {
+    const clients = await getAllClients();
+    res.json(responseMessage(clients, "Clients loaded"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get(`${ROUTES.CLIENTS}/:id`, async (req, res, next) => {
+  try {
+    const client = await getClientById(req.params.id);
+
+    if (!client) {
+      return next({
+        code: ERROR_CODES.CLIENT_NOT_FOUND,
+        message: "Client not found"
+      });
+    }
+
+    res.json(responseMessage(client, "Client loaded"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(ROUTES.CLIENTS, async (req, res, next) => {
+  try {
+    const client = await createClient(req.body);
+    res.json(responseMessage(client, "Client created"));
+  } catch (err) {
+    next(err);
+  }
 });
 
 
-router.get(`${ROUTES.CLIENTS}/:id`, (req, res) => {
-  const client = getClientById(req.params.id);
-  if (!client) throw new Error("Client not found");
-  res.json(apiResponse(client, "Client loaded"));
+router.put(`${ROUTES.CLIENTS}/:id`, async (req, res, next) => {
+  try {
+    const client = await updateClient(req.params.id, req.body);
+    res.json(responseMessage(client, "Client updated"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete(`${ROUTES.CLIENTS}/:id`, async (req, res, next) => {
+  try {
+    await deleteClient(req.params.id);
+    res.json(responseMessage(null, "Client deleted"));
+  } catch (err) {
+    next(err);
+  }
 });
 
 
-router.post(ROUTES.CLIENTS, (req, res) => {
-  const client = createClient(req.body);
-  res.json(apiResponse(client, "Client created"));
+router.get(`${ROUTES.CLIENTS}/:id/functions`, async (req, res, next) => {
+  try {
+    const data = await getClientFunctions(req.params.id);
+    res.json(responseMessage(data, "Client functions loaded"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put(`${ROUTES.CLIENTS}/:id/functions`, async (req, res, next) => {
+  try {
+    const updated = await updateClientFunctions(req.params.id, req.body);
+    res.json(responseMessage(updated, "Client functions updated"));
+  } catch (err) {
+    next(err);
+  }
 });
 
 
-router.put(`${ROUTES.CLIENTS}/:id`, (req, res) => {
-  const client = updateClient(req.params.id, req.body);
-  res.json(apiResponse(client, "Client updated"));
+router.get(`${ROUTES.CLIENTS}/:id/features`, async (req, res, next) => {
+  try {
+    const data = await getClientFeatures(req.params.id);
+    res.json(responseMessage(data, "Client features loaded"));
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.delete(`${ROUTES.CLIENTS}/:id`, (req, res) => {
-  deleteClient(req.params.id);
-  res.json(apiResponse(null, "Client deleted"));
+router.put(`${ROUTES.CLIENTS}/:id/features`, async (req, res, next) => {
+  try {
+    const updated = await updateClientFeatures(req.params.id, req.body);
+    res.json(responseMessage(updated, "Client features updated"));
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.get(`${ROUTES.CLIENTS}/:id/functions`, (req, res) => {
-  res.json(apiResponse(getClientFunctions(req.params.id), "Client Functions loaded"));
+router.get(`${ROUTES.CLIENTS}/:id/devices`, async (req, res, next) => {
+  try {
+    const data = await getClientDevices(req.params.id);
+    res.json(responseMessage(data, "Client devices loaded"));
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.put(`${ROUTES.CLIENTS}/:id/functions`, (req, res) => {
-  const updated = updateClientFunctions(req.params.id, req.body);
-  res.json(apiResponse(updated, "Client Functions updated"));
+router.put(`${ROUTES.CLIENTS}/:id/devices`, async (req, res, next) => {
+  try {
+    const updated = await updateClientDevices(req.params.id, req.body);
+    res.json(responseMessage(updated, "Client devices updated"));
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.get(`${ROUTES.CLIENTS}/:id/features`, (req, res) => {
-  res.json(apiResponse(getClientFeatures(req.params.id), "Client features loaded"));
-});
 
-router.put(`${ROUTES.CLIENTS}/:id/features`, (req, res) => {
-  const updated = updateClientFeatures(req.params.id, req.body);
-  res.json(apiResponse(updated, "Client features updated"));
+router.patch(`${ROUTES.CLIENTS}/:id/status`, async (req, res, next) => {
+  try {
+    const updated = await updateClientStatus(req.params.id, req.body.status);
+    res.json(responseMessage(updated, "Client status updated"));
+  } catch (err) {
+    next(err);
+  }
 });
-
-router.get(`${ROUTES.CLIENTS}/:id/devices`, (req, res) => {
-  res.json(apiResponse(getClientDevices(req.params.id), "Client devices loaded"));
-});
-
-router.put(`${ROUTES.CLIENTS}/:id/devices`, (req, res) => {
-  const updated = updateClientDevices(req.params.id, req.body);
-  res.json(apiResponse(updated, "Client devices updated"));
-});
-
-router.patch(`${ROUTES.CLIENTS}/:id/status`, (req, res) => {
-  const updated = updateClientStatus(req.params.id, req.body.status);
-  res.json(apiResponse(updated, "Client status updated"));
-});
-
 
 export default router;

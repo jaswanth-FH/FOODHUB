@@ -1,8 +1,7 @@
 import { ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 import { ERROR_CODES } from "../types/errorCodes";
-import { apiError } from "./apiResponses";
-import { logger } from "./logger";
+import {logger } from "../utils/logger";
 
 export function errorHandler(
   err: any,
@@ -12,44 +11,43 @@ export function errorHandler(
 ) {
 
   if (err instanceof ZodError) {
-    logger.warn("Validation error", {
-      path: req.path,
-      method: req.method,
-      issues: err.issues
+    return res.status(400).json({
+      status: "error",
+      code: ERROR_CODES.VALIDATION_ERROR,
+      message: "Request validation failed",
+      data: null,
+      meta: {
+        issues: err.issues.map(e => ({
+          path: e.path.join("."),
+          message: e.message
+        }))
+      }
     });
-
-    return res.status(400).json(
-      apiError(
-        "Request validation failed",
-        ERROR_CODES.VALIDATION_ERROR,
-        { issues: err.issues }
-      )
-    );
   }
 
-  if (err.code && ERROR_CODES[err.code as keyof typeof ERROR_CODES]) {
-    logger.info("Application error", {
+
+  if (err && err.code) {
+    return res.status(404).json({
+      status: "error",
       code: err.code,
       message: err.message,
-      path: req.path
+      data: null,
+      meta: null
     });
-
-    return res.status(400).json(
-      apiError(err.message, err.code)
-    );
   }
 
 
   logger.error("Unhandled system error", {
-    message: err.message,
-    stack: err.stack,
+    message: err?.message,
+    stack: err?.stack,
     path: req.path
   });
 
-  return res.status(500).json(
-    apiError(
-      "Internal server error",
-      ERROR_CODES.INTERNAL_SERVER_ERROR
-    )
-  );
+  return res.status(500).json({
+    status: "error",
+    code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+    message: "Internal server error",
+    data: null,
+    meta: null
+  });
 }
