@@ -1,15 +1,16 @@
-export interface ApiResponse<T> {
+export interface Response<T> {
   status: "success" | "error";
   message: string;
   data: T | null;
   meta?: Record<string, unknown>;
+  code?: string; 
 }
 
-export function apiResponse<T>(
+export function responseMessage<T>(
   data: T | null,
   message = "OK",
   meta?: Record<string, unknown>
-): ApiResponse<T> {
+): Response<T> {
   return {
     status: "success",
     message,
@@ -18,12 +19,14 @@ export function apiResponse<T>(
   };
 }
 
-export function apiError(
+export function errorMessage(
   message: string,
+  code? : string,
   meta?: Record<string, unknown>
-): ApiResponse<null> {
+): Response<null> {
   return {
     status: "error",
+    code,
     message,
     data: null,
     meta

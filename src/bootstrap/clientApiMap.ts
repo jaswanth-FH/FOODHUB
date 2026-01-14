@@ -1,19 +1,18 @@
-import { loadJson } from "../utils/loadJson";
+import { CLIENTS } from "../data/clients.data";
 import { ClientTypeEnum } from "../types/constants";
-import { ApiNameEnum } from "../types/constants";
+import { FunctionsEnum } from "../types/constants";
 
-interface ClientApiConfig {
+interface ClientFeatureConfig {
   id: string;
   type: ClientTypeEnum;
   status: string;
-  apis: ApiNameEnum[];
+  functions: FunctionsEnum[];
 }
+let clients = [...CLIENTS] as ClientFeatureConfig[];
 
-const clients = loadJson<ClientApiConfig[]>("clients.json");
-
-export function getApisForClient(
+export async function getFunctionsForClient(
   clientType: ClientTypeEnum
-): ApiNameEnum[] {
+): Promise<FunctionsEnum[]> {
   const client = clients.find(c => c.type === clientType);
-  return client ? client.apis : [];
+  return client ? client.functions : [];
 }

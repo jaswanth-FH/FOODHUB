@@ -5,7 +5,13 @@ export enum ClientTypeEnum {
   DELIVERY = "DELIVERY"
 }
 
-export enum ApiNameEnum {
+export enum StatusEnum{
+  ACTIVE = "ACTIVE",
+  DISABLED = "DISABLED",
+  MAINTENANCE = "MAINTENANCE"
+}
+
+export enum FunctionsEnum {
   MENU = "MENU",
   PAYMENTS = "PAYMENTS",
   STORE = "STORE",
@@ -25,9 +31,14 @@ export const HEADERS = {
   CLIENT_TYPE: "X-Client-Type"
 } as const;
 
+export type HeaderKey = keyof typeof HEADERS;
+
 export const ROUTES = {
-  BOOTSTRAP: "/bootstrap"
+  BOOTSTRAP: "/bootstrap",
+  CLIENTS: "/clients"
 } as const;
+
+export type RouteKey = keyof typeof ROUTES;
 
 export const META = {
   VERSION: "v1"

@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-export function loadJson<T>(fileName: string): T {
+export async function loadJson<T>(fileName: string): Promise<T> {
   const filePath = path.join(__dirname, "..", "data", fileName);
-  const raw = fs.readFileSync(filePath, "utf-8");
+  const raw = await fs.promises.readFile(filePath, "utf-8");
   return JSON.parse(raw) as T;
 }

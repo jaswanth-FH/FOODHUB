@@ -5,12 +5,12 @@ const plugins: FeaturePlugin[] = [
   new PayByLinkPlugin()
 ];
 
-export function resolveFeatures(ctx: BootstrapContext) {
+export async function resolveFeatures(ctx: BootstrapContext): Promise<Record<string, unknown>> {
   const result: Record<string, unknown> = {};
 
   for (const plugin of plugins) {
-    if (plugin.isEnabled(ctx)) {
-      result[plugin.key] = plugin.expose();
+    if (await plugin.isEnabled(ctx)) {
+      result[plugin.key] = await plugin.expose();
     }
   }
 

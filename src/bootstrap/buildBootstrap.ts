@@ -1,24 +1,22 @@
 import { BootstrapContext } from "../types/bootstrap";
 import { SYSTEM_DEFAULTS } from "./defaults";
-import { CLIENT_CAPABILITIES } from "./clientCapabilities";
 import { resolveFeatures } from "./plugins";
-import { normalizeClientType } from "./normalizeClientType";
-import { getApisForClient } from "./clientApiMap";
+import { normalizeEnum } from "../utils/normalizeEnum";
+import { ClientTypeEnum } from "../types/constants";
+import { getFunctionsForClient } from "./clientApiMap";
 import { META } from "../types/constants";
 
-export function buildBootstrap(ctx: BootstrapContext) {
-  const clientType = normalizeClientType(ctx.clientType);
-
+export async function buildBootstrap(ctx: BootstrapContext) {
+  const clientType = await normalizeEnum(ClientTypeEnum, ctx.clientType, ClientTypeEnum.WEB);
   return {
     system: SYSTEM_DEFAULTS,
 
     client: {
       type: clientType,
-      capabilities: CLIENT_CAPABILITIES[clientType],
-      apis: getApisForClient(clientType)
+      functions: await getFunctionsForClient(clientType)
     },
 
-    features: resolveFeatures({ clientType }),
+    features: await resolveFeatures({ clientType }),
 
     meta: {
       version: META.VERSION,
