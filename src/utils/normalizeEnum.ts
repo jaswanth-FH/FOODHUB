@@ -7,9 +7,15 @@ export function normalizeEnum<E extends Record<string, string>>(
 
   if (!input) return fallback ?? values[0];
 
-  const upper = input.trim().toUpperCase();
 
-  return values.includes(upper as E[keyof E])
-    ? (upper as E[keyof E])
-    : fallback ?? values[0];
+  if (values.includes(input as E[keyof E])) {
+    return input as E[keyof E];
+  }
+
+  const key = input.toUpperCase() as keyof E;
+  if (enumObj[key]) {
+    return enumObj[key];
+  }
+
+  return fallback ?? values[0];
 }
