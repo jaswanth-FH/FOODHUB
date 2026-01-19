@@ -1,32 +1,77 @@
-# 🍽️ Restaurant Ping API
+# Restaurant Control Plane – Bootstrap API
 
-A lightweight **Node.js + Express API** that serves restaurant/franchise data from a local JSON file and supports filtering, availability checks, and distance-based sorting.
+## Base URL
+http://localhost:3000/
 
----
+## Bootstrap API
 
-## 🎯 Project Goals
+### 1. Default Bootstrap (WEB client)
+```bash
+curl http://localhost:3000/bootstrap
+```
 
-This project is designed to be:
+### 2. Bootstrap for POS Client
+```bash
+curl -H "X-Client-Type: POS" http://localhost:3000/bootstrap
+```
 
-- **Simple**
-- **Transparent**
-- **Fast**
-- **Easy to extend**  
-  (distance ranking, best-match scoring, authentication, etc.)
+### 3. Bootstrap for KIOSK Client
+```bash
+curl -H "X-Client-Type: KIOSK" http://localhost:3000/bootstrap
+```
 
----
+### 4. Bootstrap for DELIVERY Client
+```bash
+curl -H "X-Client-Type: DELIVERY" http://localhost:3000/bootstrap
+```
 
-## 📦 Features
+###  Any other client
+Defaults to WEB
 
-- Load restaurant data from `data.json`
-- Health check endpoint
-- Fetch all restaurants
-- Fetch restaurant by ID
-- Filter restaurants by:
-  - Open status
-  - Town
-  - Cuisine
-- **Distance-based sorting** using latitude & longitude  
-  (Haversine formula)
 
----
+## Client Management APIs
+
+### Get all clients
+```bash
+curl http://localhost:3000/clients
+```
+
+### Get Client by ID
+```bash
+curl http://localhost:3000/clients/client_kiosk_1
+```
+
+### Create Client
+```bash
+curl -X POST http://localhost:3000/clients \
+-H "Content-Type: application/json" \
+-d '{
+  "id":"client_test_1",
+  "type":"WEB",
+  "status":"ACTIVE",
+  "apis":["STORE"],
+  "features":[],
+  "capabilities":{},
+  "devices":[],
+  "meta":{
+    "createdAt":"2026-01-10T00:00:00Z",
+    "updatedAt":"2026-01-10T00:00:00Z"
+  }
+}'
+
+```
+
+### Update Client
+```bash
+curl -X PUT http://localhost:3000/clients/client_test_1 \
+-H "Content-Type: application/json" \
+-d '{
+  "status":"DISABLED"
+}'
+```
+
+### Delete Client
+```bash
+curl -X DELETE http://localhost:3000/clients/client_test_1
+
+```
