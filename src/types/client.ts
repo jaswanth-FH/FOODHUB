@@ -1,19 +1,27 @@
-import { ClientTypeEnum } from "./constants";
-import { FunctionsEnum } from "./constants";
-import { FeatureKeyEnum } from "./constants";
-import { StatusEnum } from "./constants";
+import { ClientTypeEnum, FunctionsEnum, FeatureKeyEnum, StatusEnum } from "./constants";
 
 export interface ClientMeta {
   createdAt: string;
   updatedAt: string;
 }
 
+export interface Capability {
+  name: FunctionsEnum | FeatureKeyEnum;
+  category: "FUNCTION" | "FEATURE";
+}
+
+export interface Device {
+  id: number;
+  model: string;
+  ip: string;
+  status: StatusEnum;
+}
+
 export interface Client {
   id: string;
   type: ClientTypeEnum;
   status: StatusEnum;
-  functions: FunctionsEnum[];
-  features: FeatureKeyEnum[];
-  devices: any[];
+  capabilities: Capability[];
+  devices: Device[];
   meta: ClientMeta;
 }

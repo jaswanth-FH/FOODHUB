@@ -11,39 +11,45 @@ const ClientsSchema = z.array(ClientSchema);
 const validateClients = (data: unknown): Client[] => {
   return ClientsSchema.parse(data);
 };
-
 async function read(): Promise<Client[]> {
   const clients = await prisma.client.findMany({
     include: {
-      functions: true,
-      features: true,
+      capabilities: {
+        include: { capability: true }
+      },
       devices: true
     }
   });
-  
-  return clients.map((client: any) => ({
+
+  const mapped = clients.map(client => ({
     id: client.id,
     type: client.type as Constants.ClientTypeEnum,
     status: client.status as Constants.StatusEnum,
-    functions: client.functions.map((f: any) => f.functionName as Constants.FunctionsEnum),
-    features: client.features.map((f: any) => f.featureName as Constants.FeatureKeyEnum),
-    devices: client.devices.map((d: any) => ({
-      id: d.deviceId,
+
+    capabilities: client.capabilities.map(c => ({
+      name: c.capability.name,
+      category: c.capability.category
+    })),
+
+    devices: client.devices.map(d => ({
+      id: d.id,
       model: d.model || "",
       ip: d.ip || "",
       status: d.status || ""
     })),
+
     meta: {
       createdAt: client.createdAt.toISOString(),
       updatedAt: client.updatedAt.toISOString()
     }
   }));
+
+  return validateClients(mapped);
 }
 
 async function write(data: Client[]): Promise<void> {
-  await prisma.$transaction(async (tx: any) => {
-    await tx.client.deleteMany();
-    
+  await prisma.$transaction(async tx => {
+
     for (const client of data) {
       await tx.client.create({
         data: {
@@ -51,30 +57,40 @@ async function write(data: Client[]): Promise<void> {
           type: client.type,
           status: client.status,
           createdAt: new Date(client.meta.createdAt),
-          updatedAt: new Date(client.meta.updatedAt),
-          functions: {
-            create: client.functions.map((f: any) => ({
-              functionName: f
-            }))
-          },
-          features: {
-            create: client.features.map((f: any) => ({
-              featureName: f
-            }))
-          },
-          devices: {
-            create: client.devices.map((d: any) => ({
-              deviceId: d.id,
-              model: d.model,
-              ip: d.ip,
-              status: d.status
-            }))
-          }
+          updatedAt: new Date(client.meta.updatedAt)
         }
       });
+
+      for (const d of client.devices) {
+        await tx.device.create({
+          data: {
+            clientId: client.id,
+            model: d.model,
+            ip: d.ip,
+            status: d.status
+          }
+        });
+      }
+
+for (const cap of client.capabilities) {
+  const c = await tx.capability.upsert({
+    where: { name: cap.name },
+    update: {},
+    create: { name: cap.name, category: cap.category }
+  });
+
+  await tx.clientCapability.create({
+    data: {
+      clientId: client.id,
+      capabilityId: c.id
     }
   });
 }
+
+    }
+  });
+}
+
 
 export async function getAllClients(): Promise<Client[]> {
   return await read();
@@ -86,31 +102,7 @@ export async function getClientById(id: string): Promise<Client | undefined> {
 }
 
 export async function createClient(client: Client): Promise<Client> {
-  const normalized: Client = {
-    ...client,
-
-    type: normalizeEnum(Constants.ClientTypeEnum, client.type, Constants.ClientTypeEnum.WEB),
-
-    status: normalizeEnum(Constants.StatusEnum, client.status, Constants.StatusEnum.ACTIVE),
-
-    functions: Array.isArray(client.functions)
-      ? client.functions.map(f =>
-          normalizeEnum(Constants.FunctionsEnum, f)
-        )
-      : [],
-
-    features: Array.isArray(client.features)
-      ? client.features.map(f =>
-          normalizeEnum(Constants.FeatureKeyEnum, f)
-        )
-      : [],
-
-    devices: Array.isArray(client.devices) ? client.devices : [],
-
-    meta: client.meta
-  };
-
-  const validated = ClientSchema.parse(normalized);
+  const validated = ClientSchema.parse(client);
 
   const list = await read();
 
@@ -127,7 +119,6 @@ export async function createClient(client: Client): Promise<Client> {
   return validated;
 }
 
-
 export async function updateClient(id: string, updated: Partial<Client>): Promise<Client> {
   const list = await read();
   const index = list.findIndex(c => c.id === id);
@@ -139,48 +130,21 @@ export async function updateClient(id: string, updated: Partial<Client>): Promis
     };
   }
 
-  const current = list[index];
-
-  const normalized: Partial<Client> = {
-    type: updated.type !== undefined
-      ? normalizeEnum(Constants.ClientTypeEnum, updated.type)
-      : current.type,
-
-    status: updated.status !== undefined
-      ? normalizeEnum(Constants.StatusEnum, updated.status)
-      : current.status,
-
-    functions: updated.functions !== undefined
-      ? updated.functions.map(f =>
-          normalizeEnum(Constants.FunctionsEnum, f)
-        )
-      : current.functions,
-
-    features: updated.features !== undefined
-      ? updated.features.map(f =>
-          normalizeEnum(Constants.FeatureKeyEnum, f)
-        )
-      : current.features,
-
-    devices: updated.devices !== undefined
-      ? updated.devices
-      : current.devices
-  };
-
-  const newClient = ClientSchema.parse({
-    ...current,
-    ...normalized,
+  const merged = ClientSchema.parse({
+    ...list[index],
+    ...updated,
     meta: {
-      ...current.meta,
+      ...list[index].meta,
       updatedAt: new Date().toISOString()
     }
   });
 
-  list[index] = newClient;
+  list[index] = merged;
   await write(list);
 
-  return newClient;
+  return merged;
 }
+
 
 
 
@@ -198,30 +162,47 @@ export async function deleteClient(id: string): Promise<void> {
   await write(filtered);
 }
 
-export async function getClientFunctions(id: string): Promise<Constants.FunctionsEnum[]> {
+export async function getClientFunctions(id: string) {
   const client = await getClientById(id);
-  if (!client) throw {
-    code: ERROR_CODES.CLIENT_NOT_FOUND,
-    message: "Client not found"
-  };
-  return client.functions;
+  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+  return extractFunctions(client);
 }
 
-export async function updateClientFunctions(id: string, functions: Constants.FunctionsEnum[]): Promise<Client> {
-  return await updateClient(id, { functions });
-}
-
-export async function getClientFeatures(id: string): Promise<Constants.FeatureKeyEnum[]> {
+export async function getClientFeatures(id: string) {
   const client = await getClientById(id);
-  if (!client) throw {
-    code: ERROR_CODES.CLIENT_NOT_FOUND,
-    message: "Client not found"
-  };
-  return client.features;
+  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+  return extractFeatures(client);
 }
 
-export async function updateClientFeatures(id: string, features: Constants.FeatureKeyEnum[]): Promise<Client> {
-  return await updateClient(id, { features });
+
+export async function updateClientFunctions(
+  id: string,
+  functions: Constants.FunctionsEnum[]
+): Promise<Client> {
+  const client = await getClientById(id);
+  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+
+  const newCaps = [
+    ...client.capabilities.filter(c => c.category !== "FUNCTION"),
+    ...functions.map(f => ({ name: f, category: "FUNCTION" as const }))
+  ];
+
+  return await updateClient(id, { capabilities: newCaps });
+}
+
+export async function updateClientFeatures(
+  id: string,
+  features: Constants.FeatureKeyEnum[]
+): Promise<Client> {
+  const client = await getClientById(id);
+  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+
+  const newCaps = [
+    ...client.capabilities.filter(c => c.category !== "FEATURE"),
+    ...features.map(f => ({ name: f, category: "FEATURE" as const }))
+  ];
+
+  return await updateClient(id, { capabilities: newCaps });
 }
 
 export async function getClientDevices(id: string): Promise<any[]> {
@@ -240,3 +221,16 @@ export async function updateClientDevices(id: string, devices: any[]): Promise<C
 export async function updateClientStatus(id: string, status: Constants.StatusEnum): Promise<Client> {
   return await updateClient(id, { status });
 }
+
+function extractFunctions(client: Client): Constants.FunctionsEnum[] {
+  return client.capabilities
+    .filter(c => c.category === "FUNCTION")
+    .map(c => c.name as Constants.FunctionsEnum);
+}
+
+function extractFeatures(client: Client): Constants.FeatureKeyEnum[] {
+  return client.capabilities
+    .filter(c => c.category === "FEATURE")
+    .map(c => c.name as Constants.FeatureKeyEnum);
+}
+

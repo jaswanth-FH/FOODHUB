@@ -8,7 +8,15 @@ interface ClientFeatureConfig {
   status: string;
   functions: FunctionsEnum[];
 }
-let clients = [...CLIENTS] as ClientFeatureConfig[];
+
+let clients: ClientFeatureConfig[] = CLIENTS.map(c => ({
+  id: c.id,
+  type: c.type,
+  status: c.status,
+  functions: c.capabilities
+    .filter(cap => cap.category === "FUNCTION")
+    .map(cap => cap.name as FunctionsEnum)
+}));
 
 export async function getFunctionsForClient(
   clientType: ClientTypeEnum
