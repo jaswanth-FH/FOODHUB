@@ -56,6 +56,11 @@ async function write(data: Client[]): Promise<void> {
 
     const ids = data.map(c => c.id);
 
+    await tx.client.deleteMany({
+      where: {
+        id: { notIn: ids }
+      }
+    });
 
     for (const client of data) {
 
