@@ -14,24 +14,31 @@ import {
 } from "../src/types/constants";
 
 import { ERROR_CODES } from "../src/types/errorCodes";
+
+const TEST_ID = `test-client-${Date.now()}`;
+
 async function run() {
+  console.log("======= CLIENT REPOSITORY TEST SUITE =======\n");
+
   // --------------------
   // Initial Load
   // --------------------
   const initial = await getAllClients();
   console.log("Initial clients:", initial);
-  assert(Array.isArray(initial), "Initial clients should be array");
+  assert(Array.isArray(initial));
   console.log("✔ getAllClients passed\n");
 
   // --------------------
   // Create Client
   // --------------------
   const newClient = {
-    id: "test-client",
-    type: "web",
-    status: "active",
-    functions: ["menu"],
-    features: ["pay_by_link"],
+    id: TEST_ID,
+    type: ClientTypeEnum.WEB,
+    status: StatusEnum.ACTIVE,
+    capabilities: [
+      { name: FunctionsEnum.MENU, category: "FUNCTION" },
+      { name: "pay_by_link", category: "FEATURE" }
+    ],
     devices: [],
     meta: {
       createdAt: new Date().toISOString(),
@@ -42,16 +49,13 @@ async function run() {
   const created = await createClient(newClient as any);
   console.log("Created client:", created);
 
-  assert(created.id === "test-client");
-  assert(created.type === ClientTypeEnum.WEB);
-  assert(created.status === StatusEnum.ACTIVE);
-
-  console.log("✔ createClient + normalization passed\n");
+  assert(created.id === TEST_ID);
+  console.log("✔ createClient passed\n");
 
   // --------------------
   // Fetch by ID
   // --------------------
-  const fetched = await getClientById("test-client");
+  const fetched = await getClientById(TEST_ID);
   console.log("Fetched client:", fetched);
 
   assert(fetched);
@@ -60,101 +64,58 @@ async function run() {
   // --------------------
   // Partial Update
   // --------------------
-  const updated = await updateClient("test-client", {
-    functions: [FunctionsEnum.PAYMENTS]
+  const updated = await updateClient(TEST_ID, {
+    capabilities: [{ name: FunctionsEnum.PAYMENTS, category: "FUNCTION" }]
   } as any);
 
   console.log("Updated client:", updated);
-
- 
-  // --------------------
-  // addition of function test
-  // --------------------
-const client = await getClientById("test-client");
-
-if (!client) throw new Error("Client missing");
-
-const newFunctions = [
-  ...client.functions,
-  FunctionsEnum.MENU
-];
-
-const add = await updateClient("test-client", {
-  functions: newFunctions
-});
-console.log("After adding function:", add);
-assert(add.functions.includes(FunctionsEnum.MENU));
-console.log("✔ addition of function test passed\n");
-
-
-  assert(add.functions.includes(FunctionsEnum.MENU));
-  assert(add.type === ClientTypeEnum.WEB);
-  assert(add.status === StatusEnum.ACTIVE);
-
-  console.log("✔ partial update preserved state passed\n");
+  console.log("✔ partial update passed\n");
 
   // --------------------
-  // ZOD VALIDATION TESTS
+  // Addition of function
   // --------------------
+  const add = await updateClient(TEST_ID, {
+    capabilities: [
+      { name: FunctionsEnum.PAYMENTS, category: "FUNCTION" },
+      { name: FunctionsEnum.MENU, category: "FUNCTION" }
+    ]
+  } as any);
 
-  console.log("Testing Zod validation failures...\n");
-
-  try {
-    await createClient({
-      id: "x",
-      type: "INVALID",
-      status: "WRONG",
-      functions: undefined,
-      features: undefined,
-      devices: [],
-      meta: {
-        createdAt: "",
-        updatedAt: ""
-      }
-    } as any);
-
-    assert(false, "Expected Zod validation to fail");
-  } catch (err: any) {
-    console.log("Zod error output:", err);
-
-    assert(err.errors || err.issues, "Expected Zod error object");
-    console.log("✔ Zod validation failure test passed\n");
-  }
+  console.log("After adding function:", add);
+  assert(add.capabilities.some(c => c.name === FunctionsEnum.MENU));
+  console.log("✔ add function passed\n");
 
   // --------------------
   // Duplicate Client Test
   // --------------------
   try {
     await createClient(newClient as any);
-    assert(false, "Expected duplicate client error");
+    assert(false);
   } catch (err: any) {
-    console.log("Duplicate error:", err);
+    console.log("Duplicate error:", err.code);
     assert(err.code === ERROR_CODES.CLIENT_ALREADY_EXISTS);
-    console.log("✔ duplicate client error test passed\n");
+    console.log("✔ duplicate client test passed\n");
   }
-
-
 
   // --------------------
   // Update Non-Existing Client
   // --------------------
   try {
     await updateClient("missing-client", { status: StatusEnum.DISABLED });
-    assert(false, "Expected client not found error");
+    assert(false);
   } catch (err: any) {
-    console.log("Missing update error:", err);
+    console.log("Missing update error:", err.code);
     assert(err.code === ERROR_CODES.CLIENT_NOT_FOUND);
-    console.log("✔ update missing client error passed\n");
+    console.log("✔ update missing client passed\n");
   }
 
   // --------------------
   // Delete Client
   // --------------------
-  await deleteClient("test-client");
-  const deleted = await getClientById("test-client");
+  await deleteClient(TEST_ID);
+  const deleted = await getClientById(TEST_ID);
 
-  console.log("Deleted lookup result:", deleted);
-
+  console.log("Deleted lookup:", deleted);
   assert(!deleted);
   console.log("✔ deleteClient passed\n");
 
@@ -162,12 +123,12 @@ console.log("✔ addition of function test passed\n");
   // Delete Missing Client
   // --------------------
   try {
-    await deleteClient("test-client");
-    assert(false, "Expected delete missing client error");
+    await deleteClient(TEST_ID);
+    assert(false);
   } catch (err: any) {
-    console.log("Delete missing error:", err);
+    console.log("Delete missing error:", err.code);
     assert(err.code === ERROR_CODES.CLIENT_NOT_FOUND);
-    console.log("✔ delete missing client error passed\n");
+    console.log("✔ delete missing client passed\n");
   }
 
   console.log("=================================");

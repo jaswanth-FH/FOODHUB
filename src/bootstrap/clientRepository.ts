@@ -1,58 +1,72 @@
 import { Client } from "../types/client";
 import * as Constants from "../types/constants";
-import { normalizeEnum } from "../utils/normalizeEnum";
-import { ClientSchema } from "../types/schemas";
+import { CapabilitySchema, ClientSchema } from "../types/schemas";
 import { ERROR_CODES } from "../types/errorCodes";
 import { z } from "zod";
 import { prisma } from "../utils/prisma";
+
+
+/* ---------------- VALIDATION ---------------- */
 
 const ClientsSchema = z.array(ClientSchema);
 
 const validateClients = (data: unknown): Client[] => {
   return ClientsSchema.parse(data);
 };
+
+/* ---------------- READ ---------------- */
 async function read(): Promise<Client[]> {
   const clients = await prisma.client.findMany({
     include: {
-      capabilities: {
-        include: { capability: true }
-      },
+      capabilities: { include: { capability: true } },
       devices: true
     }
   });
 
-  const mapped = clients.map(client => ({
-    id: client.id,
-    type: client.type as Constants.ClientTypeEnum,
-    status: client.status as Constants.StatusEnum,
+  const mapped: Client[] = clients.map(c => ({
+    id: c.id,
+    type: c.type as Constants.ClientTypeEnum,
+    status: c.status as Constants.StatusEnum,
 
-    capabilities: client.capabilities.map(c => ({
-      name: c.capability.name,
-      category: c.capability.category
+    capabilities: c.capabilities.map(cc => ({
+      name: cc.capability.name as Constants.FunctionsEnum | Constants.FeatureKeyEnum,
+      category: cc.capability.category as "FUNCTION" | "FEATURE"
     })),
 
-    devices: client.devices.map(d => ({
+    devices: c.devices.map(d => ({
       id: d.id,
       model: d.model || "",
       ip: d.ip || "",
-      status: d.status || ""
+      status: d.status as Constants.StatusEnum
     })),
 
     meta: {
-      createdAt: client.createdAt.toISOString(),
-      updatedAt: client.updatedAt.toISOString()
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString()
     }
   }));
 
   return validateClients(mapped);
 }
 
+/* ---------------- WRITE (SAFE UPSERT) ---------------- */
+
 async function write(data: Client[]): Promise<void> {
   await prisma.$transaction(async tx => {
 
+    const ids = data.map(c => c.id);
+
+
     for (const client of data) {
-      await tx.client.create({
-        data: {
+
+      await tx.client.upsert({
+        where: { id: client.id },
+        update: {
+          type: client.type,
+          status: client.status,
+          updatedAt: new Date(client.meta.updatedAt)
+        },
+        create: {
           id: client.id,
           type: client.type,
           status: client.status,
@@ -60,6 +74,9 @@ async function write(data: Client[]): Promise<void> {
           updatedAt: new Date(client.meta.updatedAt)
         }
       });
+
+      await tx.device.deleteMany({ where: { clientId: client.id } });
+      await tx.clientCapability.deleteMany({ where: { clientId: client.id } });
 
       for (const d of client.devices) {
         await tx.device.create({
@@ -72,41 +89,44 @@ async function write(data: Client[]): Promise<void> {
         });
       }
 
-for (const cap of client.capabilities) {
-  const c = await tx.capability.upsert({
-    where: { name: cap.name },
-    update: {},
-    create: { name: cap.name, category: cap.category }
-  });
+      for (const cap of client.capabilities) {
+        const c = await tx.capability.upsert({
+          where: { name: cap.name },
+          update: {},
+          create: {
+            name: cap.name,
+            category: cap.category
+          }
+        });
 
-  await tx.clientCapability.create({
-    data: {
-      clientId: client.id,
-      capabilityId: c.id
+        await tx.clientCapability.create({
+          data: {
+            clientId: client.id,
+            capabilityId: c.id
+          }
+        });
+      }
     }
   });
 }
 
-    }
-  });
+/* ---------------- PUBLIC API ---------------- */
+
+export async function getAllClients() {
+  return read();
 }
 
-
-export async function getAllClients(): Promise<Client[]> {
-  return await read();
-}
-
-export async function getClientById(id: string): Promise<Client | undefined> {
+export async function getClientById(id: string) {
   const list = await read();
   return list.find(c => c.id === id);
 }
 
-export async function createClient(client: Client): Promise<Client> {
+export async function createClient(client: Client) {
   const validated = ClientSchema.parse(client);
 
   const list = await read();
 
-  if (list.find(c => c.id === validated.id)) {
+  if (list.some(c => c.id === validated.id)) {
     throw {
       code: ERROR_CODES.CLIENT_ALREADY_EXISTS,
       message: "Client already exists"
@@ -119,7 +139,7 @@ export async function createClient(client: Client): Promise<Client> {
   return validated;
 }
 
-export async function updateClient(id: string, updated: Partial<Client>): Promise<Client> {
+export async function updateClient(id: string, updated: Partial<Client>) {
   const list = await read();
   const index = list.findIndex(c => c.id === id);
 
@@ -144,93 +164,93 @@ export async function updateClient(id: string, updated: Partial<Client>): Promis
 
   return merged;
 }
+export async function deleteClient(id: string) {
+  await prisma.$transaction(async tx => {
 
+    await tx.clientCapability.deleteMany({
+      where: { clientId: id }
+    });
 
+    await tx.device.deleteMany({
+      where: { clientId: id }
+    });
 
+    const deleted = await tx.client.deleteMany({
+      where: { id }
+    });
 
-export async function deleteClient(id: string): Promise<void> {
-  const list = await read();
-  const filtered = list.filter(c => c.id !== id);
+    if (deleted.count === 0) {
+      throw {
+        code: ERROR_CODES.CLIENT_NOT_FOUND,
+        message: "Client not found"
+      };
+    }
+  });
+}
 
-  if (filtered.length === list.length) {
+/* ---------------- DERIVED ---------------- */
+
+export async function getClientFunctions(id: string) {
+  const c = await getClientById(id);
+  if (!c) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+  return c.capabilities
+    .filter(x => x.category === "FUNCTION")
+    .map(x => x.name);
+}
+
+export async function getClientFeatures(id: string) {
+  const c = await getClientById(id);
+  if (!c) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+  return c.capabilities
+    .filter(x => x.category === "FEATURE")
+    .map(x => x.name);
+}
+
+export async function getClientDevices(id: string) {
+  const c = await getClientById(id);
+  if (!c) {
     throw {
       code: ERROR_CODES.CLIENT_NOT_FOUND,
       message: "Client not found"
     };
   }
-
-  await write(filtered);
+  return c.devices;
 }
-
-export async function getClientFunctions(id: string) {
-  const client = await getClientById(id);
-  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
-  return extractFunctions(client);
-}
-
-export async function getClientFeatures(id: string) {
-  const client = await getClientById(id);
-  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
-  return extractFeatures(client);
-}
-
 
 export async function updateClientFunctions(
   id: string,
   functions: Constants.FunctionsEnum[]
-): Promise<Client> {
-  const client = await getClientById(id);
-  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+) {
+  const c = await getClientById(id);
+  if (!c) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
 
-  const newCaps = [
-    ...client.capabilities.filter(c => c.category !== "FUNCTION"),
-    ...functions.map(f => ({ name: f, category: "FUNCTION" as const }))
-  ];
-
-  return await updateClient(id, { capabilities: newCaps });
+  return updateClient(id, {
+    capabilities: [
+      ...c.capabilities.filter(x => x.category !== "FUNCTION"),
+      ...functions.map(f => ({ name: f, category: "FUNCTION" as const }))
+    ]
+  });
 }
 
 export async function updateClientFeatures(
   id: string,
   features: Constants.FeatureKeyEnum[]
-): Promise<Client> {
-  const client = await getClientById(id);
-  if (!client) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
+) {
+  const c = await getClientById(id);
+  if (!c) throw { code: ERROR_CODES.CLIENT_NOT_FOUND };
 
-  const newCaps = [
-    ...client.capabilities.filter(c => c.category !== "FEATURE"),
-    ...features.map(f => ({ name: f, category: "FEATURE" as const }))
-  ];
-
-  return await updateClient(id, { capabilities: newCaps });
+  return updateClient(id, {
+    capabilities: [
+      ...c.capabilities.filter(x => x.category !== "FEATURE"),
+      ...features.map(f => ({ name: f, category: "FEATURE" as const }))
+    ]
+  });
 }
 
-export async function getClientDevices(id: string): Promise<any[]> {
-  const client = await getClientById(id);
-  if (!client) throw {
-    code: ERROR_CODES.CLIENT_NOT_FOUND,
-    message: "Client not found"
-  };
-  return client.devices;
+export async function updateClientDevices(id: string, devices: any[]) {
+  return updateClient(id, { devices });
 }
 
-export async function updateClientDevices(id: string, devices: any[]): Promise<Client> {
-  return await updateClient(id, { devices });
+export async function updateClientStatus(id: string, status: Constants.StatusEnum) {
+  return updateClient(id, { status });
 }
-
-export async function updateClientStatus(id: string, status: Constants.StatusEnum): Promise<Client> {
-  return await updateClient(id, { status });
-}
-
-function extractFunctions(client: Client): Constants.FunctionsEnum[] {
-  return client.capabilities
-    .filter(c => c.category === "FUNCTION")
-    .map(c => c.name as Constants.FunctionsEnum);
-}
-
-function extractFeatures(client: Client): Constants.FeatureKeyEnum[] {
-  return client.capabilities
-    .filter(c => c.category === "FEATURE")
-    .map(c => c.name as Constants.FeatureKeyEnum);
-}
-
