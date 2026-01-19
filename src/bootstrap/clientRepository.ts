@@ -1,28 +1,79 @@
-import { CLIENTS } from "../data/clients.data";
 import { Client } from "../types/client";
 import * as Constants from "../types/constants";
 import { normalizeEnum } from "../utils/normalizeEnum";
 import { ClientSchema } from "../types/schemas";
 import { ERROR_CODES } from "../types/errorCodes";
 import { z } from "zod";
-
-
-let clients : Client[] = [...CLIENTS];
-
+import { prisma } from "../utils/prisma";
 
 const ClientsSchema = z.array(ClientSchema);
-
 
 const validateClients = (data: unknown): Client[] => {
   return ClientsSchema.parse(data);
 };
 
 async function read(): Promise<Client[]> {
-  return validateClients(clients);
+  const clients = await prisma.client.findMany({
+    include: {
+      functions: true,
+      features: true,
+      devices: true
+    }
+  });
+  
+  return clients.map((client: any) => ({
+    id: client.id,
+    type: client.type as Constants.ClientTypeEnum,
+    status: client.status as Constants.StatusEnum,
+    functions: client.functions.map((f: any) => f.functionName as Constants.FunctionsEnum),
+    features: client.features.map((f: any) => f.featureName as Constants.FeatureKeyEnum),
+    devices: client.devices.map((d: any) => ({
+      id: d.deviceId,
+      model: d.model || "",
+      ip: d.ip || "",
+      status: d.status || ""
+    })),
+    meta: {
+      createdAt: client.createdAt.toISOString(),
+      updatedAt: client.updatedAt.toISOString()
+    }
+  }));
 }
 
 async function write(data: Client[]): Promise<void> {
-  clients = validateClients(data);
+  await prisma.$transaction(async (tx: any) => {
+    await tx.client.deleteMany();
+    
+    for (const client of data) {
+      await tx.client.create({
+        data: {
+          id: client.id,
+          type: client.type,
+          status: client.status,
+          createdAt: new Date(client.meta.createdAt),
+          updatedAt: new Date(client.meta.updatedAt),
+          functions: {
+            create: client.functions.map((f: any) => ({
+              functionName: f
+            }))
+          },
+          features: {
+            create: client.features.map((f: any) => ({
+              featureName: f
+            }))
+          },
+          devices: {
+            create: client.devices.map((d: any) => ({
+              deviceId: d.id,
+              model: d.model,
+              ip: d.ip,
+              status: d.status
+            }))
+          }
+        }
+      });
+    }
+  });
 }
 
 export async function getAllClients(): Promise<Client[]> {
