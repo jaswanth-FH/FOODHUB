@@ -1,9 +1,10 @@
 import { Client } from "../types/client";
 import * as Constants from "../types/constants";
-import { ClientSchema , ClientCreateSchema } from "../types/schemas";
+import { ClientSchema, ClientCreateSchema } from "../types/schemas";
 import { ERROR_CODES } from "../types/errorCodes";
 
 import { prisma } from "../utils/prisma";
+import { resolveDependencies } from "../utils/capabilityDependencies";
 
 /* ---------------- MAPPER ---------------- */
 
@@ -56,7 +57,6 @@ export async function getClientByName(name: string): Promise<Client | undefined>
   return mapClient(c);
 }
 
-
 export async function getClientByID(id: number): Promise<Client | undefined> {
   const c = await prisma.client.findUnique({
     where: { id },
@@ -70,13 +70,14 @@ export async function getClientByID(id: number): Promise<Client | undefined> {
   return mapClient(c);
 }
 
-
 /* ---------------- CREATE ---------------- */
+
 export async function createClient(client: unknown) {
   const validated = ClientCreateSchema.parse(client);
 
-  return prisma.$transaction(async tx => {
+  const capabilitiesWithDependencies = resolveDependencies(validated.capabilities);
 
+  return prisma.$transaction(async tx => {
     const exists = await tx.client.findUnique({
       where: { name: validated.name }
     });
@@ -107,7 +108,7 @@ export async function createClient(client: unknown) {
       });
     }
 
-    for (const cap of validated.capabilities) {
+    for (const cap of capabilitiesWithDependencies) {
       const capability = await tx.capability.upsert({
         where: { name: cap.name },
         update: {},
@@ -133,16 +134,18 @@ export async function createClient(client: unknown) {
     }
 
     const full = await tx.client.findUnique({
-  where: { id: created.id },
-  include: {
-    capabilities: { include: { capability: true } },
-    devices: true
-  }
-});
+      where: { id: created.id },
+      include: {
+        capabilities: { include: { capability: true } },
+        devices: true
+      }
+    });
 
-return mapClient(full);
+    return mapClient(full);
   });
 }
+
+/* ---------------- UPDATE ---------------- */
 
 export async function updateClient(name: string, updated: Partial<Client>) {
   const existing = await prisma.client.findUnique({
@@ -156,55 +159,69 @@ export async function updateClient(name: string, updated: Partial<Client>) {
     };
   }
 
-  await prisma.client.update({
-    where: { name },
-    data: {
-      type: updated.type,
-      status: updated.status
-    }
-  });
-
-  if (updated.devices) {
-    await prisma.device.deleteMany({ where: { clientId: existing.id } });
-
-    for (const d of updated.devices) {
-      await prisma.device.create({
-        data: {
-          clientId: existing.id,
-          ip: d.ip,
-          model: d.model,
-          status: d.status
-        }
-      });
-    }
-  }
-
-  if (updated.capabilities) {
-    await prisma.clientCapability.deleteMany({
-      where: { clientId: existing.id }
+  return prisma.$transaction(async tx => {
+    await tx.client.update({
+      where: { name },
+      data: {
+        type: updated.type,
+        status: updated.status
+      }
     });
 
-    for (const cap of updated.capabilities) {
-      const capability = await prisma.capability.upsert({
-        where: { name: cap.name },
-        update: {},
-        create: {
-          name: cap.name,
-          category: cap.category
-        }
-      });
+    if (updated.devices) {
+      await tx.device.deleteMany({ where: { clientId: existing.id } });
 
-      await prisma.clientCapability.create({
-        data: {
-          clientId: existing.id,
-          capabilityId: capability.id
-        }
-      });
+      for (const d of updated.devices) {
+        await tx.device.create({
+          data: {
+            clientId: existing.id,
+            ip: d.ip,
+            model: d.model,
+            status: d.status
+          }
+        });
+      }
     }
-  }
 
-  return getClientByName(name);
+    if (updated.capabilities) {
+      const resolvedCapabilities = resolveDependencies(updated.capabilities);
+
+      await tx.clientCapability.deleteMany({
+        where: { clientId: existing.id }
+      });
+
+      for (const cap of resolvedCapabilities) {
+        const capability = await tx.capability.upsert({
+          where: { name: cap.name },
+          update: {},
+          create: {
+            name: cap.name,
+            category: cap.category
+          }
+        });
+
+        await tx.clientCapability.create({
+          data: {
+            clientId: existing.id,
+            capabilityId: capability.id
+          }
+        });
+      }
+    }
+
+    const full = await tx.client.findUnique({
+      where: { id: existing.id },
+      include: {
+        capabilities: { include: { capability: true } },
+        devices: true
+      }
+    });
+
+    return mapClient(full);
+  });
 }
+
+/* ---------------- DEVICES ---------------- */
 
 export async function updateClientDevices(
   name: string,
@@ -214,36 +231,10 @@ export async function updateClientDevices(
     status: Constants.StatusEnum;
   }[]
 ) {
-  const c = await prisma.client.findUnique({
-    where: { name }
-  });
-
-  if (!c) {
-    throw {
-      code: ERROR_CODES.CLIENT_NOT_FOUND,
-      message: "Client not found"
-    };
-  }
-
-  await prisma.$transaction(async tx => {
-    await tx.device.deleteMany({
-      where: { clientId: c.id }
-    });
-
-    for (const d of devices) {
-      await tx.device.create({
-        data: {
-          clientId: c.id,
-          ip: d.ip,
-          model: d.model,
-          status: d.status
-        }
-      });
-    }
-  });
-
-  return getClientByName(name);
+  return updateClient(name, { devices });
 }
+
+/* ---------------- DELETE ---------------- */
 
 export async function deleteClient(name: string) {
   const c = await prisma.client.findUnique({ where: { name } });
@@ -255,20 +246,22 @@ export async function deleteClient(name: string) {
     };
   }
 
-  await prisma.clientCapability.deleteMany({
-    where: { clientId: c.id }
-  });
+  await prisma.$transaction(async tx => {
+    await tx.clientCapability.deleteMany({
+      where: { clientId: c.id }
+    });
 
-  await prisma.device.deleteMany({
-    where: { clientId: c.id }
-  });
+    await tx.device.deleteMany({
+      where: { clientId: c.id }
+    });
 
-  await prisma.client.delete({
-    where: { name }
+    await tx.client.delete({
+      where: { name }
+    });
   });
 }
 
-
+/* ---------------- READ HELPERS ---------------- */
 
 export async function getClientFunctions(name: string) {
   const c = await getClientByName(name);
@@ -294,6 +287,8 @@ export async function getClientDevices(name: string) {
 
   return c.devices;
 }
+
+/* ---------------- CAPABILITY HELPERS ---------------- */
 
 export async function updateClientFunctions(
   name: string,
