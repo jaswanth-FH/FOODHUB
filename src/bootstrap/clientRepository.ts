@@ -206,7 +206,44 @@ export async function updateClient(name: string, updated: Partial<Client>) {
   return getClientByName(name);
 }
 
+export async function updateClientDevices(
+  name: string,
+  devices: {
+    model: string;
+    ip: string;
+    status: Constants.StatusEnum;
+  }[]
+) {
+  const c = await prisma.client.findUnique({
+    where: { name }
+  });
 
+  if (!c) {
+    throw {
+      code: ERROR_CODES.CLIENT_NOT_FOUND,
+      message: "Client not found"
+    };
+  }
+
+  await prisma.$transaction(async tx => {
+    await tx.device.deleteMany({
+      where: { clientId: c.id }
+    });
+
+    for (const d of devices) {
+      await tx.device.create({
+        data: {
+          clientId: c.id,
+          ip: d.ip,
+          model: d.model,
+          status: d.status
+        }
+      });
+    }
+  });
+
+  return getClientByName(name);
+}
 
 export async function deleteClient(name: string) {
   const c = await prisma.client.findUnique({ where: { name } });

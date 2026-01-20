@@ -4,7 +4,7 @@ import { responseMessage  } from "../utils/responses";
 import { ERROR_CODES } from "../types/errorCodes";
 import {
   getAllClients,
-  getClientById,
+  getClientByID,
   createClient,
   updateClient,
   deleteClient,
@@ -31,7 +31,7 @@ router.get(ROUTES.CLIENTS, async (req, res, next) => {
 
 router.get(`${ROUTES.CLIENTS}/:id`, async (req, res, next) => {
   try {
-    const client = await getClientById(req.params.id);
+    const client = await getClientByID(Number(req.params.id));
 
     if (!client) {
       return next({
