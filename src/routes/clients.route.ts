@@ -5,6 +5,7 @@ import { ERROR_CODES } from "../types/errorCodes";
 import {
   getAllClients,
   getClientByID,
+  getClientByName,
   createClient,
   updateClient,
   deleteClient,
@@ -29,9 +30,26 @@ router.get(ROUTES.CLIENTS, async (req, res, next) => {
   }
 });
 
-router.get(`${ROUTES.CLIENTS}/:id`, async (req, res, next) => {
+router.get(`${ROUTES.CLIENTS}/id/:id`, async (req, res, next) => {
   try {
     const client = await getClientByID(Number(req.params.id));
+
+    if (!client) {
+      return next({
+        code: ERROR_CODES.CLIENT_NOT_FOUND,
+        message: "Client not found"
+      });
+    }
+
+    res.json(responseMessage(client, "Client loaded"));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get(`${ROUTES.CLIENTS}/name/:name`, async (req, res, next) => {
+  try {
+    const client = await getClientByName(req.params.name);
 
     if (!client) {
       return next({
