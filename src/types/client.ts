@@ -11,14 +11,15 @@ export interface Capability {
 }
 
 export interface Device {
-  id: number;
+  id?: number;
   model: string;
   ip: string;
   status: StatusEnum;
 }
 
 export interface Client {
-  id: string;
+  id: number;
+  name: string;
   type: ClientTypeEnum;
   status: StatusEnum;
   capabilities: Capability[];

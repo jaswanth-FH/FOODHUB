@@ -4,7 +4,7 @@ import {
   createClient,
   updateClient,
   deleteClient,
-  getClientById
+  getClientByName
 } from "../src/bootstrap/clientRepository";
 
 import {
@@ -15,7 +15,7 @@ import {
 
 import { ERROR_CODES } from "../src/types/errorCodes";
 
-const TEST_ID = `test-client-${Date.now()}`;
+const TEST_NAME = `test-client-${Date.now()}`;
 
 async function run() {
   console.log("======= CLIENT REPOSITORY TEST SUITE =======\n");
@@ -32,7 +32,7 @@ async function run() {
   // Create Client
   // --------------------
   const newClient = {
-    id: TEST_ID,
+    name: TEST_NAME,
     type: ClientTypeEnum.WEB,
     status: StatusEnum.ACTIVE,
     capabilities: [
@@ -46,27 +46,34 @@ async function run() {
     }
   };
 
-  const created = await createClient(newClient as any);
-  console.log("Created client:", created);
+const created = await createClient(newClient as any);
+assert(created, "createClient returned undefined");
 
-  assert(created.id === TEST_ID);
+console.log("Created client:", created);
+assert(created.name === TEST_NAME);
+
+
+  assert(created.name === TEST_NAME);
   console.log("✔ createClient passed\n");
 
   // --------------------
-  // Fetch by ID
+  // Fetch by Name
   // --------------------
-  const fetched = await getClientById(TEST_ID);
+  const fetched = await getClientByName(TEST_NAME);
+  assert(fetched, "getClientByName returned undefined");
   console.log("Fetched client:", fetched);
+  assert(fetched.name === TEST_NAME);
 
   assert(fetched);
-  console.log("✔ getClientById passed\n");
+  console.log("✔ getClientByName passed\n");
 
   // --------------------
   // Partial Update
   // --------------------
-  const updated = await updateClient(TEST_ID, {
+  const updated = await updateClient(TEST_NAME, {
     capabilities: [{ name: FunctionsEnum.PAYMENTS, category: "FUNCTION" }]
   } as any);
+  assert(updated, "Updated client is undefined");
 
   console.log("Updated client:", updated);
   console.log("✔ partial update passed\n");
@@ -74,7 +81,7 @@ async function run() {
   // --------------------
   // Addition of function
   // --------------------
-  const add = await updateClient(TEST_ID, {
+  const add = await updateClient(TEST_NAME, {
     capabilities: [
       { name: FunctionsEnum.PAYMENTS, category: "FUNCTION" },
       { name: FunctionsEnum.MENU, category: "FUNCTION" }
@@ -82,6 +89,7 @@ async function run() {
   } as any);
 
   console.log("After adding function:", add);
+  assert(add, "Add client is undefined");
   assert(add.capabilities.some(c => c.name === FunctionsEnum.MENU));
   console.log("✔ add function passed\n");
 
@@ -112,8 +120,8 @@ async function run() {
   // --------------------
   // Delete Client
   // --------------------
-  await deleteClient(TEST_ID);
-  const deleted = await getClientById(TEST_ID);
+  await deleteClient(TEST_NAME);
+  const deleted = await getClientByName(TEST_NAME);
 
   console.log("Deleted lookup:", deleted);
   assert(!deleted);
@@ -123,7 +131,7 @@ async function run() {
   // Delete Missing Client
   // --------------------
   try {
-    await deleteClient(TEST_ID);
+    await deleteClient(TEST_NAME);
     assert(false);
   } catch (err: any) {
     console.log("Delete missing error:", err.code);

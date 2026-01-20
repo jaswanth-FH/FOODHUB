@@ -3,14 +3,14 @@ import { ClientTypeEnum } from "../types/constants";
 import { FunctionsEnum } from "../types/constants";
 
 interface ClientFeatureConfig {
-  id: string;
+  name: string;
   type: ClientTypeEnum;
   status: string;
   functions: FunctionsEnum[];
 }
 
 let clients: ClientFeatureConfig[] = CLIENTS.map(c => ({
-  id: c.id,
+  name: c.name,
   type: c.type,
   status: c.status,
   functions: c.capabilities

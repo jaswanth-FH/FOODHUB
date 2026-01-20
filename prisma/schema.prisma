@@ -7,41 +7,73 @@ datasource db {
   provider = "postgresql"
 }
 
+
+enum ClientStatus {
+  ACTIVE
+  DISABLED
+  MAINTENANCE
+}
+
+enum ClientType {
+  WEB
+  POS
+  KIOSK
+  DELIVERY
+}
+
+enum CapabilityCategory {
+  FUNCTION
+  FEATURE
+}
+
+
 model Client {
-  id          String   @id
-  status      String
-  type        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  devices     Device[]
-  capabilities ClientCapability[]
+  id        Int          @id @default(autoincrement())
+  name      String       @unique @db.VarChar(50)
+  status    ClientStatus
+  type      ClientType
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  devices        Device[]
+  capabilities   ClientCapability[]
+
+  @@index([status])
+  @@index([type])
 }
-
 model Device {
-  id        Int    @id @default(autoincrement())
-  ip        String
-  model     String
-  status    String
-  clientId  String
-  client    Client @relation(fields: [clientId], references: [id])
+  id       Int    @id @default(autoincrement())
+  ip       String @db.VarChar(20)
+  model    String @db.VarChar(50)
+  status   String @db.VarChar(20)
+
+  clientId Int
+  client   Client @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
 }
+
 
 model Capability {
-  id       Int    @id @default(autoincrement())
-  name     String @unique
-  category String
+  id       Int                @id @default(autoincrement())
+  name     String             @unique @db.VarChar(50)
+  category CapabilityCategory
 
   clients  ClientCapability[]
 }
 
 model ClientCapability {
   id           Int @id @default(autoincrement())
-  clientId     String
+
+  clientId     Int
   capabilityId Int
 
   client     Client     @relation(fields: [clientId], references: [id])
   capability Capability @relation(fields: [capabilityId], references: [id])
 
   @@unique([clientId, capabilityId])
+  @@index([clientId])
+  @@index([capabilityId])
 }
