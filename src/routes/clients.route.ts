@@ -35,10 +35,7 @@ router.get(`${ROUTES.CLIENTS}/:name`, async (req, res, next) => {
     const client = await getClientByName(req.params.name);
 
     if (!client) {
-      return next({
-        code: ERROR_CODES.CLIENT_NOT_FOUND,
-        message: "Client not found"
-      });
+
     }
 
     res.json(responseMessage(client, "Client loaded"));

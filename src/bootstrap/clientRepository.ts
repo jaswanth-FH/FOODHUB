@@ -53,7 +53,11 @@ export async function getClientByName(name: string): Promise<Client | undefined>
     }
   });
 
-  if (!c) return undefined;
+  if (!c){
+    return next({
+        code: ERROR_CODES.CLIENT_NOT_FOUND,
+        message: "Client not found"
+      })}
   return mapClient(c);
 }
 

@@ -5,7 +5,7 @@ import {
   FunctionsEnum,
   FeatureKeyEnum
 } from "./constants";
-import { CapabilityCategory } from "../utils/prisma";
+import { CapabilityCategoryEnum as CapabilityCategory } from "./constants"
 
 
 /* ---------------- ENUM SCHEMAS ---------------- */
@@ -52,5 +52,6 @@ export const ClientSchema = ClientCreateSchema.extend({
 
 
 
-export type ClientDTO = z.infer<typeof ClientCreateSchema>;
+export type ClientCreateDTO = z.infer<typeof ClientCreateSchema>;
+export type ClientDTO = z.infer<typeof ClientSchema>
 

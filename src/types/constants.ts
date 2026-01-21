@@ -22,6 +22,11 @@ export enum FunctionsEnum {
   DELIVERY_ORDERS = "DELIVERY_ORDERS"
 }
 
+export enum CapabilityCategoryEnum {
+  FUNCTION = "FUNCTION",
+  FEATURE = "FEATURE"
+}
+
 export enum FeatureKeyEnum {
   PAY_BY_LINK = "pay_by_link",
   PARTIAL_REFUND = "partial_refund",
