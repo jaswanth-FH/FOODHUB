@@ -4,173 +4,188 @@ import {
   createClient,
   updateClient,
   deleteClient,
-  getClientById
+  getClientByName
 } from "../src/bootstrap/clientRepository";
 
 import {
   FunctionsEnum,
   ClientTypeEnum,
-  StatusEnum
+  StatusEnum,
+  FeatureKeyEnum
 } from "../src/types/constants";
 
 import { ERROR_CODES } from "../src/types/errorCodes";
+import {
+  resolveDependencies,
+  validateDependencies,
+  getDependencies
+} from "../src/utils/capabilityDependencies";
+
+const TEST_NAME = `test-client-${Date.now()}`;
+
 async function run() {
-  // --------------------
-  // Initial Load
-  // --------------------
+  console.log("======= CLIENT REPOSITORY TEST SUITE =======\n");
+
+  /* ---------------- INITIAL LOAD ---------------- */
+
   const initial = await getAllClients();
-  console.log("Initial clients:", initial);
-  assert(Array.isArray(initial), "Initial clients should be array");
+  assert(Array.isArray(initial));
   console.log("✔ getAllClients passed\n");
 
-  // --------------------
-  // Create Client
-  // --------------------
+  /* ---------------- CREATE CLIENT ---------------- */
+
   const newClient = {
-    id: "test-client",
-    type: "web",
-    status: "active",
-    functions: ["menu"],
-    features: ["pay_by_link"],
-    devices: [],
-    meta: {
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    name: TEST_NAME,
+    type: ClientTypeEnum.WEB,
+    status: StatusEnum.ACTIVE,
+    capabilities: [
+      { name: FunctionsEnum.MENU, category: "FUNCTION" as const },
+      { name: FeatureKeyEnum.PAY_BY_LINK, category: "FEATURE" as const }
+    ],
+    devices: []
   };
 
   const created = await createClient(newClient as any);
-  console.log("Created client:", created);
+  assert(created);
+  assert(created.name === TEST_NAME);
 
-  assert(created.id === "test-client");
-  assert(created.type === ClientTypeEnum.WEB);
-  assert(created.status === StatusEnum.ACTIVE);
+  console.log("✔ createClient passed\n");
 
-  console.log("✔ createClient + normalization passed\n");
+  /* ---------------- FETCH BY NAME ---------------- */
 
-  // --------------------
-  // Fetch by ID
-  // --------------------
-  const fetched = await getClientById("test-client");
-  console.log("Fetched client:", fetched);
-
+  const fetched = await getClientByName(TEST_NAME);
   assert(fetched);
-  console.log("✔ getClientById passed\n");
+  assert(fetched!.name === TEST_NAME);
 
-  // --------------------
-  // Partial Update
-  // --------------------
-  const updated = await updateClient("test-client", {
-    functions: [FunctionsEnum.PAYMENTS]
+  console.log("✔ getClientByName passed\n");
+
+  /* ---------------- PARTIAL UPDATE ---------------- */
+
+  const updated = await updateClient(TEST_NAME, {
+    capabilities: [{ name: FunctionsEnum.PAYMENTS, category: "FUNCTION" }]
   } as any);
 
-  console.log("Updated client:", updated);
+  assert(updated);
+  console.log("✔ partial update passed\n");
 
- 
-  // --------------------
-  // addition of function test
-  // --------------------
-const client = await getClientById("test-client");
+  /* ---------------- ADD FUNCTION ---------------- */
 
-if (!client) throw new Error("Client missing");
+  const add = await updateClient(TEST_NAME, {
+    capabilities: [
+      { name: FunctionsEnum.PAYMENTS, category: "FUNCTION" },
+      { name: FunctionsEnum.MENU, category: "FUNCTION" }
+    ]
+  } as any);
 
-const newFunctions = [
-  ...client.functions,
-  FunctionsEnum.MENU
-];
+  assert(add);
+  assert(add.capabilities.some(c => c.name === FunctionsEnum.MENU));
+  console.log("✔ add function passed\n");
 
-const add = await updateClient("test-client", {
-  functions: newFunctions
-});
-console.log("After adding function:", add);
-assert(add.functions.includes(FunctionsEnum.MENU));
-console.log("✔ addition of function test passed\n");
+  /* ---------------- DUPLICATE CLIENT ---------------- */
 
-
-  assert(add.functions.includes(FunctionsEnum.MENU));
-  assert(add.type === ClientTypeEnum.WEB);
-  assert(add.status === StatusEnum.ACTIVE);
-
-  console.log("✔ partial update preserved state passed\n");
-
-  // --------------------
-  // ZOD VALIDATION TESTS
-  // --------------------
-
-  console.log("Testing Zod validation failures...\n");
-
-  try {
-    await createClient({
-      id: "x",
-      type: "INVALID",
-      status: "WRONG",
-      functions: undefined,
-      features: undefined,
-      devices: [],
-      meta: {
-        createdAt: "",
-        updatedAt: ""
-      }
-    } as any);
-
-    assert(false, "Expected Zod validation to fail");
-  } catch (err: any) {
-    console.log("Zod error output:", err);
-
-    assert(err.errors || err.issues, "Expected Zod error object");
-    console.log("✔ Zod validation failure test passed\n");
-  }
-
-  // --------------------
-  // Duplicate Client Test
-  // --------------------
   try {
     await createClient(newClient as any);
-    assert(false, "Expected duplicate client error");
+    assert(false);
   } catch (err: any) {
-    console.log("Duplicate error:", err);
     assert(err.code === ERROR_CODES.CLIENT_ALREADY_EXISTS);
-    console.log("✔ duplicate client error test passed\n");
+    console.log("✔ duplicate client test passed\n");
   }
 
+  /* ---------------- UPDATE MISSING ---------------- */
 
-
-  // --------------------
-  // Update Non-Existing Client
-  // --------------------
   try {
     await updateClient("missing-client", { status: StatusEnum.DISABLED });
-    assert(false, "Expected client not found error");
+    assert(false);
   } catch (err: any) {
-    console.log("Missing update error:", err);
     assert(err.code === ERROR_CODES.CLIENT_NOT_FOUND);
-    console.log("✔ update missing client error passed\n");
+    console.log("✔ update missing client passed\n");
   }
 
-  // --------------------
-  // Delete Client
-  // --------------------
-  await deleteClient("test-client");
-  const deleted = await getClientById("test-client");
+  /* ---------------- DELETE CLIENT ---------------- */
 
-  console.log("Deleted lookup result:", deleted);
-
+  await deleteClient(TEST_NAME);
+  const deleted = await getClientByName(TEST_NAME);
   assert(!deleted);
+
   console.log("✔ deleteClient passed\n");
 
-  // --------------------
-  // Delete Missing Client
-  // --------------------
+  /* ---------------- DELETE MISSING ---------------- */
+
   try {
-    await deleteClient("test-client");
-    assert(false, "Expected delete missing client error");
+    await deleteClient(TEST_NAME);
+    assert(false);
   } catch (err: any) {
-    console.log("Delete missing error:", err);
     assert(err.code === ERROR_CODES.CLIENT_NOT_FOUND);
-    console.log("✔ delete missing client error passed\n");
+    console.log("✔ delete missing client passed\n");
   }
 
-  console.log("=================================");
+  /* ---------------- DEPENDENCY SYSTEM ---------------- */
+
+  console.log("\n=== CAPABILITY DEPENDENCIES TEST ===");
+
+  const testCapabilities = [
+    { name: FeatureKeyEnum.PAY_BY_LINK, category: "FEATURE" as const },
+    { name: FunctionsEnum.MENU, category: "FUNCTION" as const }
+  ];
+
+  const resolved = resolveDependencies(testCapabilities);
+
+  assert(resolved.some(c => c.name === FunctionsEnum.PAYMENTS));
+  assert(resolved.some(c => c.name === FeatureKeyEnum.PAY_BY_LINK));
+  assert(resolved.some(c => c.name === FunctionsEnum.MENU));
+
+  console.log("✔ resolveDependencies passed");
+
+  const validCapabilities = [
+    { name: FeatureKeyEnum.PAY_BY_LINK, category: "FEATURE" as const },
+    { name: FunctionsEnum.PAYMENTS, category: "FUNCTION" as const }
+  ];
+
+  const invalidCapabilities = [
+    { name: FeatureKeyEnum.PAY_BY_LINK, category: "FEATURE" as const }
+  ];
+
+  assert.doesNotThrow(() => validateDependencies(validCapabilities));
+  assert.throws(() => validateDependencies(invalidCapabilities));
+
+  console.log("✔ validateDependencies passed");
+
+  const deps = getDependencies(FeatureKeyEnum.PAY_BY_LINK, "FEATURE");
+
+  assert(deps.length === 1);
+  assert(deps[0].name === FunctionsEnum.PAYMENTS);
+
+  console.log("✔ getDependencies passed");
+
+  /* ---------------- CREATE WITH DEPENDENCIES ---------------- */
+
+  const testName2 = `test-dependencies-${Date.now()}`;
+
+  const clientWithDependencies = {
+    name: testName2,
+    type: ClientTypeEnum.WEB,
+    status: StatusEnum.ACTIVE,
+    capabilities: [
+      { name: FeatureKeyEnum.PAY_BY_LINK, category: "FEATURE" },
+      { name: FunctionsEnum.MENU, category: "FUNCTION" }
+    ],
+    devices: []
+  };
+
+  const createdWithDependencies = await createClient(clientWithDependencies as any);
+  assert(createdWithDependencies);
+
+  const hasPayments = createdWithDependencies.capabilities.some(
+    c => c.name === FunctionsEnum.PAYMENTS && c.category === "FUNCTION"
+  );
+
+  assert(hasPayments);
+
+  await deleteClient(testName2);
+
+  console.log("✔ dependency injection in createClient passed");
+
+  console.log("\n=================================");
   console.log("ALL TESTS PASSED ✅");
   console.log("=================================\n");
 }

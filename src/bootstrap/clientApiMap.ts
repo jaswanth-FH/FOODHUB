@@ -3,12 +3,20 @@ import { ClientTypeEnum } from "../types/constants";
 import { FunctionsEnum } from "../types/constants";
 
 interface ClientFeatureConfig {
-  id: string;
+  name: string;
   type: ClientTypeEnum;
   status: string;
   functions: FunctionsEnum[];
 }
-let clients = [...CLIENTS] as ClientFeatureConfig[];
+
+let clients: ClientFeatureConfig[] = CLIENTS.map(c => ({
+  name: c.name,
+  type: c.type,
+  status: c.status,
+  functions: c.capabilities
+    .filter(cap => cap.category === "FUNCTION")
+    .map(cap => cap.name as FunctionsEnum)
+}));
 
 export async function getFunctionsForClient(
   clientType: ClientTypeEnum
